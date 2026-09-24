@@ -23,10 +23,14 @@ El servicio queda disponible en `http://localhost:8080`.
 
 ### `GET /`
 
-Confirma que el servicio está vivo:
+Confirma que el servicio está vivo y muestra la autora y el estado de la API:
 
-```
-API REST - Counter-Strike 2
+```json
+{
+  "autora": "Diana",
+  "dominio": "Counter",
+  "estado": "API funcionando"
+}
 ```
 
 ### `GET /api/armas?nombre=M4A4`
