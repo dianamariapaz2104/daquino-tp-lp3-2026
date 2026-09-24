@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public class DesertEagle extends Pistola {
 
@@ -11,7 +11,13 @@ public class DesertEagle extends Pistola {
             700,
             equipo,
             7,
-            "Semiautomático"
+            "Semiautomático",
+            7
         );
+    }
+
+    @Override
+    public String comportamientoDeCombate() {
+        return "Pistola pesada semiautomática, un proyectil de alto poder por gatillazo.";
     }
 }

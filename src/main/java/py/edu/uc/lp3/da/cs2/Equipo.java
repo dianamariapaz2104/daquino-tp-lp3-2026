@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public class Equipo {
 

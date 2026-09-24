@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class IndexController {
 
 	@GetMapping("/")
-	public String holaMundo() {
-		return "Hola mundo";
+	public String indice() {
+		return "API REST - Counter-Strike 2";
 	}
 }

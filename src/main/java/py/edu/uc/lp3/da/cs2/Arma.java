@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public abstract class Arma {
 
@@ -8,16 +8,26 @@ public abstract class Arma {
     private float tiempoRecarga;
     private int precio;
     private Equipo equipo;
+    private int municion;
 
     public Arma(String nombre, int daño, float precision,
-                float tiempoRecarga, int precio, Equipo equipo) {
+                float tiempoRecarga, int precio, Equipo equipo, int municion) {
+        if (daño < 0) {
+            throw new IllegalArgumentException("El daño no puede ser negativo: " + daño);
+        }
+        if (municion < 0) {
+            throw new IllegalArgumentException("La munición no puede ser negativa: " + municion);
+        }
         this.nombre = nombre;
         this.daño = daño;
         this.precision = precision;
         this.tiempoRecarga = tiempoRecarga;
         this.precio = precio;
         this.equipo = equipo;
+        this.municion = municion;
     }
+
+    public abstract String comportamientoDeCombate();
 
     public String obtenerInfo() {
         return "Arma: " + nombre
@@ -29,7 +39,13 @@ public abstract class Arma {
     }
 
     public boolean puedeDisparar() {
-        return true;
+        return municion > 0;
+    }
+
+    protected void gastarMunicion() {
+        if (municion > 0) {
+            municion--;
+        }
     }
 
     public String getNombre() {
@@ -54,5 +70,9 @@ public abstract class Arma {
 
     public Equipo getEquipo() {
         return equipo;
+    }
+
+    public int getMunicion() {
+        return municion;
     }
 }

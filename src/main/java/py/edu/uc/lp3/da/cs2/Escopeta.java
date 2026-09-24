@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public abstract class Escopeta extends Arma {
 
@@ -7,14 +7,17 @@ public abstract class Escopeta extends Arma {
 
     public Escopeta(String nombre, int daño, float precision,
                     float tiempoRecarga, int precio, Equipo equipo,
-                    int perdigones, float dispersion) {
-        super(nombre, daño, precision, tiempoRecarga, precio, equipo);
+                    int perdigones, float dispersion, int municion) {
+        super(nombre, daño, precision, tiempoRecarga, precio, equipo, municion);
         this.perdigones = perdigones;
         this.dispersion = dispersion;
     }
 
     public void disparoSecundario() {
-        System.out.println(getNombre() + " realizando disparo secundario...");
+        if (puedeDisparar()) {
+            gastarMunicion();
+            System.out.println(getNombre() + " realizando disparo secundario...");
+        }
     }
 
     public void recargar() {

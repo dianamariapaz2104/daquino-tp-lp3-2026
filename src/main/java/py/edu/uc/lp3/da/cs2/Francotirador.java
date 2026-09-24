@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public abstract class Francotirador extends Arma {
 
@@ -7,8 +7,8 @@ public abstract class Francotirador extends Arma {
 
     public Francotirador(String nombre, int daño, float precision,
                          float tiempoRecarga, int precio, Equipo equipo,
-                         float zoom, int penetracion) {
-        super(nombre, daño, precision, tiempoRecarga, precio, equipo);
+                         float zoom, int penetracion, int municion) {
+        super(nombre, daño, precision, tiempoRecarga, precio, equipo, municion);
         this.zoom = zoom;
         this.penetracion = penetracion;
     }

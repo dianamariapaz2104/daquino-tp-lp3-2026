@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public abstract class Pistola extends Arma {
 
@@ -7,14 +7,17 @@ public abstract class Pistola extends Arma {
 
     public Pistola(String nombre, int daño, float precision,
                    float tiempoRecarga, int precio, Equipo equipo,
-                   int capacidadCargador, String modoDisparo) {
-        super(nombre, daño, precision, tiempoRecarga, precio, equipo);
+                   int capacidadCargador, String modoDisparo, int municion) {
+        super(nombre, daño, precision, tiempoRecarga, precio, equipo, municion);
         this.capacidadCargador = capacidadCargador;
         this.modoDisparo = modoDisparo;
     }
 
     public void disparar() {
-        System.out.println(getNombre() + " disparando...");
+        if (puedeDisparar()) {
+            gastarMunicion();
+            System.out.println(getNombre() + " disparando...");
+        }
     }
 
     public void recargar() {

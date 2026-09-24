@@ -1,4 +1,4 @@
-package py.edu.uc.lp3.herencia;
+package py.edu.uc.lp3.da.cs2;
 
 public abstract class SubfusilSMG extends Arma {
 
@@ -7,14 +7,17 @@ public abstract class SubfusilSMG extends Arma {
 
     public SubfusilSMG(String nombre, int daño, float precision,
                        float tiempoRecarga, int precio, Equipo equipo,
-                       float cadenciaFuego, float movilidad) {
-        super(nombre, daño, precision, tiempoRecarga, precio, equipo);
+                       float cadenciaFuego, float movilidad, int municion) {
+        super(nombre, daño, precision, tiempoRecarga, precio, equipo, municion);
         this.cadenciaFuego = cadenciaFuego;
         this.movilidad = movilidad;
     }
 
     public void dispararEnMovimiento() {
-        System.out.println(getNombre() + " disparando en movimiento...");
+        if (puedeDisparar()) {
+            gastarMunicion();
+            System.out.println(getNombre() + " disparando en movimiento...");
+        }
     }
 
     public void recargar() {
