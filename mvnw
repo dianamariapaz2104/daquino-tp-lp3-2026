@@ -33,6 +33,18 @@ set -euf
 [ "${MVNW_VERBOSE-}" != debug ] || set -x
 
 # OS specific support.
+if [ -z "${JAVA_HOME-}" ]; then
+  if [ -d "/opt/homebrew/opt/openjdk@21" ]; then
+    JAVA_HOME="/opt/homebrew/opt/openjdk@21"
+    export JAVA_HOME
+  elif [ -d "/opt/homebrew/opt/openjdk" ]; then
+    JAVA_HOME="/opt/homebrew/opt/openjdk"
+    export JAVA_HOME
+  elif [ -x "/usr/libexec/java_home" ]; then
+    JAVA_HOME="$(/usr/libexec/java_home 2>/dev/null)" || :
+    export JAVA_HOME
+  fi
+fi
 native_path() { printf %s\\n "$1"; }
 case "$(uname)" in
 CYGWIN* | MINGW*)
