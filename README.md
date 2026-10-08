@@ -1,79 +1,43 @@
-# Counter-Strike 2 - API REST
+# Counter-Strike 2 - API REST (TP LP3)
 
-Servicio HTTP desarrollado con Spring Boot y Java 21 para modelar las armas de
-Counter-Strike 2. El dominio aplica herencia, sobreescritura, encapsulamiento y
-polimorfismo: todas las armas se tratan a través de la superclase `Arma`.
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-## Tecnologías
+Trabajo practico de Lenguaje de Programación 3. Es un servicio web hecho con Spring Boot que modela las armas del juego Counter-Strike 2.
 
-- Java 21
-- Spring Boot
-- Maven
-- Spring Web
+Para armar esto usé herencia, polimorfismo y encapsulamiento. Hay una clase abstracta Arma de la que heredan las demás (EJEMPLO Pistola, Rifle, Escopeta etc)
 
-## Ejecución
+> **Commit de la entrega:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/tree/main
 
+## Como correrlo
+Con Java 21, se puede levantar el proyecto desde la terminal así:
 ```bash
 ./mvnw spring-boot:run
 ```
+Para ver si funciona se entra a `http://localhost:8080/`.
 
-El servicio queda disponible en `http://localhost:8080`.
+Para correr los tests del proyecto:
+```bash
+./mvnw test
+```
+
+## Qué cambió con la sobrecarga y sobreescritura?
+
+**Sobrecarga:**
+En la clase `Arma` y en las clases hijas armé varios constructores. Uno vacio, uno que recibe solo el equipo, y otro que recibe todos los datos (nombre, munición, etc).
+También sobrecargué el metodo `disparar()`. Dependiendo de si le paso o no la distancia por parametro, hace distintas cosas. Lo que mas cambió es la comodidad para crear los objetos. En vez de tener un constructor gigante que me obligue a pasarle muchos datos, armé varias opciones. Asi el Controller instancia el arma justo con los datos que le llegan por la URL y listo. Ademas, al sobrecargar disparar(), evito inventar nombres como dispararBasico() o dispararConDistancia(): uso siempre el mismo metodo pero le paso distintos parámetros.
+
+**Sobreescritura (Overriding):**
+En mi clase abstracta `Arma` puse los metodos abstractos `comportamientoDeCombate()` y `disparar()`. Despues en cada clase concreta (como `M4A4`, `Glock18` o `Nova`) les puse el `@Override` y les di el comportamiento específico de ese arma. Así cuando llamo al metodo desde el controller, gracias al polimorfismo, me responde el arma que corresponde sin tener que usar comprobaciones como `instanceof`. 
 
 ## Endpoints
 
-### `GET /`
+- **`GET /`** Devuelve mi nombre, el dominio y los endpoints que hay.
+- **`GET /api/armas?nombre=M4A4&municion=20`** Crea el arma pasandole los parametros por URL usando el constructor sobrecargado y te devuelve el JSON. Si se le manda datos invalidos (ej.: municion negativa) marca error 400.
+- **`GET /api/armas/polimorfismo`** Muestra una lista de todas las armas armadas usando la clase padre `Arma` y muestra como cada una responde distinto al método de combate.
+- **`GET /api/armas/disparar?nombre=M4A4&distancia=10&headshot=true`** Muestra como funciona el método de disparo sobrecargado.
 
-Confirma que el servicio está vivo y muestra la autora y el estado de la API:
-
-```json
-{
-  "autora": "Diana",
-  "dominio": "Counter",
-  "estado": "API funcionando"
-}
-```
-
-### `GET /api/armas?nombre=M4A4`
-
-Construye un arma a partir del parámetro `nombre` y responde JSON con su estado
-y comportamiento de combate. El nombre debe coincidir con una clase concreta del
-dominio. Si el arma no existe, responde `404`.
-
-Ejemplo:
-
-```http
-GET /api/armas?nombre=M4A4
-```
-
-```json
-{
-  "arma": "M4A4",
-  "municion": 30,
-  "comportamientoDeCombate": "Fusil de asalto automático, ráfagas precisas a media y larga distancia."
-}
-```
-
-Otros ejemplos:
-
-```json
-{
-  "arma": "Glock18",
-  "municion": 20,
-  "comportamientoDeCombate": "Pistola semiautomática de 9 mm con cargador amplio y fuego rápido controlable."
-}
-```
-
-```json
-{
-  "arma": "Nova",
-  "municion": 8,
-  "comportamientoDeCombate": "Escopeta de perdigones dispersos, letal en combate cuerpo a cuerpo."
-}
-```
-
-## Diseño de clases
-
-Diagrama Mermaid de las clases reales del dominio y sus relaciones de herencia.
+## Diagrama de Clases
+Este es el diseño que armé para el paquete `domain`:
 
 ```mermaid
 classDiagram
@@ -86,88 +50,91 @@ classDiagram
     -int precio
     -Equipo equipo
     -int municion
+    -int capacidadCargador
+    +Arma()
+    +Arma(String nombre)
+    +Arma(String, int, int, int, int, float, float, Equipo)
     +obtenerInfo() String
     +puedeDisparar() boolean
-    +getMunicion() int
+    +recargar()
+    +disparar() String
+    +disparar(int distancia) String
+    +disparar(int distancia, boolean headshot) String
     +comportamientoDeCombate() String*
+    +disparar() String*
   }
 
   class Equipo {
     -String nombre
+    +Equipo()
+    +Equipo(String nombre)
     +getNombre() String
     +setNombre(String nombre)
   }
 
   class Pistola {
     <<abstract>>
-    -int capacidadCargador
     -String modoDisparo
-    +disparar()
-    +recargar()
   }
 
   class Rifle {
     <<abstract>>
     -String modoDisparo
     -float retroceso
-    +dispararRafaga()
-    +apuntar()
   }
 
   class Escopeta {
     <<abstract>>
     -int perdigones
     -float dispersion
-    +disparoSecundario()
-    +recargar()
   }
 
   class SubfusilSMG {
     <<abstract>>
     -float cadenciaFuego
     -float movilidad
-    +dispararEnMovimiento()
-    +recargar()
   }
 
   class Francotirador {
     <<abstract>>
     -float zoom
     -int penetracion
-    +apuntarConMira()
-    +contenerRespiracion()
   }
 
   class Granada {
     <<abstract>>
     -float radioExplosion
     -float tiempoExplosion
-    +lanzar()
-    +rebotar()
   }
 
   class DesertEagle {
     +comportamientoDeCombate() String
+    +disparar() String
   }
 
   class Glock18 {
     +comportamientoDeCombate() String
+    +disparar() String
   }
 
   class M4A4 {
     +comportamientoDeCombate() String
-  }
-
-  class Nova {
-    +comportamientoDeCombate() String
+    +disparar() String
   }
 
   class MP9 {
     +comportamientoDeCombate() String
+    +disparar() String
+  }
+
+  class Nova {
+    +comportamientoDeCombate() String
+    +disparar() String
   }
 
   class GranadaHE {
     +comportamientoDeCombate() String
+    +disparar() String
   }
 
   Arma <|-- Pistola
@@ -180,17 +147,9 @@ classDiagram
   Pistola <|-- DesertEagle
   Pistola <|-- Glock18
   Rifle <|-- M4A4
-  Escopeta <|-- Nova
   SubfusilSMG <|-- MP9
+  Escopeta <|-- Nova
   Granada <|-- GranadaHE
 
   Arma --> Equipo : equipo
 ```
-
-## Polimorfismo
-
-El controller construye un arma a través de una fábrica y la guarda en una
-referencia del tipo padre `Arma`. Luego pide el mensaje abstracto
-`comportamientoDeCombate()` sobre esa referencia: cada arma concreta responde
-con su propia implementación mediante sobreescritura (`@Override`), sin que el
-controller conozca el tipo concreto ni use `instanceof`.
