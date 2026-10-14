@@ -1,6 +1,6 @@
 package py.edu.uc.lp3.da.cs2;
 
-public class DesertEagle extends Pistola {
+public class DesertEagle extends Pistola implements ConModoDeDisparo {
 
     public DesertEagle(Equipo equipo) {
         super(

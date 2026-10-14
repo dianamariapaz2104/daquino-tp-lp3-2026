@@ -1,6 +1,6 @@
 package py.edu.uc.lp3.da.cs2;
 
-public class M4A4 extends Rifle {
+public class M4A4 extends Rifle implements ConModoDeDisparo {
 
     public M4A4(Equipo equipo) {
         super(
@@ -19,5 +19,11 @@ public class M4A4 extends Rifle {
     @Override
     public String comportamientoDeCombate() {
         return "Fusil de asalto automático, ráfagas precisas a media y larga distancia.";
+    }
+
+    @Override
+    public String descripcionDeDisparo() {
+        return "Modo de disparo: " + getModoDisparo()
+                + " con retroceso " + getRetroceso() + ".";
     }
 }

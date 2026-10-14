@@ -57,7 +57,26 @@ Otros ejemplos:
 
 ```json
 {
-  "arma": "Glock18",
+  "arma": "Glock-18",
+  "municion": 20,
+  "comportamientoDeCombate": "Pistola semiautomática de 9 mm con cargador amplio y fuego rápido controlable."
+}
+```
+
+### `GET /armas/crear?nombre=Glock-18&precio=200`
+
+Crea un arma indicando su `precio` de forma opcional. El `nombre` tolera
+guiones y mayúsculas/minúsculas (por ejemplo `Glock-18`, `desert-eagle`,
+`M4A4`). Si `precio` se omite, se usa el precio por defecto del arma.
+
+```http
+GET /armas/crear?nombre=Glock-18&precio=200
+```
+
+```json
+{
+  "arma": "Glock-18",
+  "precio": 200,
   "municion": 20,
   "comportamientoDeCombate": "Pistola semiautomática de 9 mm con cargador amplio y fuego rápido controlable."
 }
@@ -68,6 +87,32 @@ Otros ejemplos:
   "arma": "Nova",
   "municion": 8,
   "comportamientoDeCombate": "Escopeta de perdigones dispersos, letal en combate cuerpo a cuerpo."
+}
+```
+
+### `GET /api/modo-disparo?nombre=M4A4`
+
+Pide el mensaje de la capacidad **"modo de disparo"** a través del tipo de la
+interfaz `ConModoDeDisparo` y responde JSON. `DesertEagle` (familia `Pistola`)
+usa la implementación por defecto, mientras que `M4A4` (familia `Rifle`)
+sobreescribe el default. Si el arma no declara el modo de disparo, responde
+`404`.
+
+```http
+GET /api/modo-disparo?nombre=M4A4
+```
+
+```json
+{
+  "arma": "M4A4",
+  "descripcionDeDisparo": "Modo de disparo: Automático con retroceso 0.55."
+}
+```
+
+```json
+{
+  "arma": "Desert Eagle",
+  "descripcionDeDisparo": "Modo de disparo: Semiautomático"
 }
 ```
 
@@ -170,6 +215,12 @@ classDiagram
     +comportamientoDeCombate() String
   }
 
+  class ConModoDeDisparo {
+    <<interface>>
+    +getModoDisparo() String
+    +descripcionDeDisparo() String
+  }
+
   Arma <|-- Pistola
   Arma <|-- Rifle
   Arma <|-- Escopeta
@@ -184,6 +235,9 @@ classDiagram
   SubfusilSMG <|-- MP9
   Granada <|-- GranadaHE
 
+  ConModoDeDisparo <|.. DesertEagle
+  ConModoDeDisparo <|.. M4A4
+
   Arma --> Equipo : equipo
 ```
 
@@ -194,3 +248,12 @@ referencia del tipo padre `Arma`. Luego pide el mensaje abstracto
 `comportamientoDeCombate()` sobre esa referencia: cada arma concreta responde
 con su propia implementación mediante sobreescritura (`@Override`), sin que el
 controller conozca el tipo concreto ni use `instanceof`.
+
+## Capacidad compartida entre familias
+
+`DesertEagle` (familia `Pistola`) y `M4A4` (familia `Rifle`) comparten la
+capacidad de tener un modo de disparo, así que se declaró la interfaz
+`ConModoDeDisparo` en el dominio con el mensaje `descripcionDeDisparo()`. La
+interfaz provee un default y `M4A4` lo reemplaza con su propia versión, mientras
+`DesertEagle` conserva el default. El endpoint `/api/modo-disparo` pide el
+mensaje a través del tipo de la interfaz (no del tipo concreto).

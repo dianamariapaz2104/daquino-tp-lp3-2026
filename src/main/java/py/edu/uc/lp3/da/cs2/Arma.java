@@ -68,6 +68,13 @@ public abstract class Arma {
         return precio;
     }
 
+    public void setPrecio(int precio) {
+        if (precio < 0) {
+            throw new IllegalArgumentException("El precio no puede ser negativo: " + precio);
+        }
+        this.precio = precio;
+    }
+
     public Equipo getEquipo() {
         return equipo;
     }
