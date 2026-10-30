@@ -2,40 +2,45 @@
 
 **Alumna:** Diana Aquino  
 **Dominio:** Counter-Strike 2  
-**Materia:** Lenguaje de Programación 3 (LP3) - POO-06  
+**Materia:** Lenguaje de Programación 3 (LP3) - POO-06 / Persistencia H2  
 
 ---
 
 ## 1. Objetivo del Trabajo
-El objetivo de este trabajo práctico es publicar una API REST usando Spring Boot y Java 21. La idea era modelar un dominio a elección (yo elegí las armas del Counter-Strike 2) y aplicar los conceptos de POO que estuvimos viendo en clase: herencia, polimorfismo, constructores sobrecargados y métodos abstractos.
+El objetivo de este trabajo práctico es publicar una API REST usando Spring Boot 3.3.4, Java 21, Spring Data JPA y base de datos H2. Modelé el dominio de Counter-Strike 2 (armas, explosivos, agentes y equipos) aplicando herencia, polimorfismo, constructores sobrecargados, métodos abstractos, invariantes protegidos y arquitectura de 3 capas (`Controller` -> `Service` -> `Repository`).
 
 ## 2. Consignas aplicadas en mi código
-- **Paquetes:** Usé el template de la catedra tal cual lo pidieron. Todo el codigo del dominio está adentro de `py.edu.uc.lp3.domain` y los controllers los puse en `py.edu.uc.lp3.rest.controller`.
-- **Sobrecarga:** En las clases hice por lo menos 3 constructores distintos. Además, el metodo `disparar()` está sobrecargado para recibir distintos parámetros según el caso.
-- **Sobreescritura:** Hice que la clase padre `Arma` sea abstracta y le puse métodos abstractos como `comportamientoDeCombate()`. Después creé clases hijas (como la `M4A4`, `Glock18` o `Nova`) y les puse `@Override` a esos metodos para darles su comportamiento propio a cada arma.
-- **Servicios REST:** Armé un `IndexController` para la ruta principal `/` y un `ArmaController` para `/api/armas` que se encarga de crear el objeto leyendo los parámetros que le pasamos por la URL.
+- **Paquetes y Arquitectura de 3 Capas:** El dominio está en `py.edu.uc.lp3.domain`, los repositorios JPA en `py.edu.uc.lp3.repository`, la capa de negocio en `py.edu.uc.lp3.service` y los controladores REST en `py.edu.uc.lp3.rest.controller`.
+- **Sobrecarga:** En `Arma` y en las clases hijas definí 3 constructores sobrecargados (`Arma()`, `Arma(...)` de 7 parámetros y `Arma(...)` completo de 8 parámetros). Además, los métodos `disparar()` y `recargar()` están sobrecargados para recibir distintos parámetros según el caso.
+- **Sobreescritura y Dos Jerarquías:**
+  - Jerarquía 1 (`Arma`): Clase abstracta con `comportamientoDeCombate()` y `disparar()` sobreescritos con `@Override` en `M4A4`, `MP9`, `DesertEagle`, `Glock18`, `Nova` y `GranadaHE`.
+  - Jerarquía 2 (`Agente`): Clase abstracta con `rolTactico()` y `ejecutarAccionEspecial()` sobreescritos con `@Override` en `AgenteCT` y `AgenteTerrorista`.
+- **CRUD H2 y Regla de Negocio con 3 Clases:** `ArmaService` valida el presupuesto máximo de CS2 (`$16,000`), el límite de daño y ejecuta la simulación de explosivos (`simularExplosionGranada`) donde colaboran `Agente`, `GranadaHE`/`Granada` y `Equipo` persistiendo en H2 (`./data/armas`).
 
 ## 3. Cómo probar el código
 
-Primero hay que clonar el repositorio. No hace falta instalar Maven a mano porque dejé configurado el wrapper, solo necesitan tener instalado Java 21.
-
-Para levantar la aplicación, se corre esto en la terminal desde la carpeta del proyecto:
+Para levantar la aplicación desde la carpeta del proyecto:
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Una vez que levantó, se puede probar estas URLs en el navegador o en Postman:
-- `http://localhost:8080/` (Para ver que funcione y tire mis datos)
-- `http://localhost:8080/api/armas?nombre=M4A4&municion=25&equipo=CT` (Para crear el arma pasandole parámetros)
-- `http://localhost:8080/api/armas/polimorfismo` (Muestra cómo actúan distintas armas con el mismo método)
-- `http://localhost:8080/api/armas/disparar?nombre=M4A4&distancia=30&headshot=true`
+Una vez que levantó, se pueden probar estas URLs en el navegador o en Insomnia/Postman:
+- `http://localhost:8080/` (Estado de la API y listado de endpoints)
+- `http://localhost:8080/api/armas?nombre=M4A4&municion=25&equipo=Counter-Terrorista` (Construye y persiste el arma desde parámetros URL)
+- `http://localhost:8080/api/armas/todas` (Lista todas las armas guardadas en H2)
+- `http://localhost:8080/api/armas/polimorfismo` (Muestra el polimorfismo de la jerarquía `Arma`)
+- `http://localhost:8080/api/agentes/polimorfismo` (Muestra el polimorfismo de la jerarquía `Agente`)
+- `http://localhost:8080/api/armas/disparar?nombre=M4A4&distancia=30&headshot=true` (Muestra las sobrecargas de `disparar`)
+- `http://localhost:8080/api/armas/granadas/simular?equipoAtacante=Counter-Terrorista&equipoObjetivo=Terrorista&distancia=2.0&chaleco=true` (Simulación de explosión de granada con 3 clases del modelo)
+- `http://localhost:8080/h2-console` (Consola H2 con JDBC URL `jdbc:h2:file:./data/armas` y usuario `sa`)
 
-Si se quiere probar los tests automatizados, pueden correr:
+Para correr los 16 tests automatizados:
 ```bash
 ./mvnw test
 ```
 
 ---
 
-## 4. Enlace de la entrega
-**Commit final de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/tree/main
+## 4. Enlaces exactos de entrega (Hash del Commit)
+- **Commit exacto de la versión con CRUD H2, 3 Capas y Simulación de Granadas:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/058c8521c384223c4d7a5f41f01d557dccc11899
+- **Commit exacto de la entrega POO-06:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/f8757155883626bc2b6ccb6883b07afd4650fa70
