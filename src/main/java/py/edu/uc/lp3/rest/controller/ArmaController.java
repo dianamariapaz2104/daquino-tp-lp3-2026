@@ -4,32 +4,91 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
+import py.edu.uc.lp3.domain.Agente;
 import py.edu.uc.lp3.domain.Arma;
-import py.edu.uc.lp3.domain.DesertEagle;
 import py.edu.uc.lp3.domain.Equipo;
-import py.edu.uc.lp3.domain.Glock18;
-import py.edu.uc.lp3.domain.GranadaHE;
-import py.edu.uc.lp3.domain.M4A4;
-import py.edu.uc.lp3.domain.MP9;
-import py.edu.uc.lp3.domain.Nova;
+import py.edu.uc.lp3.service.ArmaService;
 
 @RestController
 public class ArmaController {
 
+    private final ArmaService armaService;
+
+    public ArmaController(ArmaService armaService) {
+        this.armaService = armaService;
+    }
+
+    // ==========================================
+    // Endpoints CRUD REST (3 Capas + H2)
+    // ==========================================
+
     /**
-     * Consigna 4: Construye una instancia del dominio a partir de parámetros de la URL.
-     * Esos valores alimentan los constructores simples y sobrecargados.
-     * Si un valor viola una regla del dominio (invariante), la clase lo rechaza
-     * (lanzando IllegalArgumentException) y el controller informa el resultado con HTTP 400.
+     * CREATE (POST /api/armas): Crea una nueva entidad Arma validando en el Service y persistiendo en H2.
+     */
+    @PostMapping("/api/armas")
+    public ResponseEntity<Arma> crearArma(@RequestBody Arma arma) {
+        Arma guardada = armaService.crearArma(arma);
+        return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
+    }
+
+    /**
+     * READ ALL (GET /api/armas/todas): Lista todas las armas almacenadas en la base de datos H2.
+     */
+    @GetMapping("/api/armas/todas")
+    public ResponseEntity<List<Arma>> listarTodas() {
+        return ResponseEntity.ok(armaService.listarTodas());
+    }
+
+    /**
+     * READ BY ID (GET /api/armas/{id}): Obtiene un arma por su ID desde la base de datos H2.
+     */
+    @GetMapping("/api/armas/{id:\\d+}")
+    public ResponseEntity<Arma> obtenerPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(armaService.obtenerPorId(id));
+    }
+
+    /**
+     * UPDATE (PUT /api/armas/{id}): Actualiza un arma existente en H2 pasando por las validaciones de negocio.
+     */
+    @PutMapping("/api/armas/{id:\\d+}")
+    public ResponseEntity<Arma> actualizarArma(@PathVariable Long id, @RequestBody Arma armaActualizada) {
+        Arma actualizada = armaService.actualizarArma(id, armaActualizada);
+        return ResponseEntity.ok(actualizada);
+    }
+
+    /**
+     * DELETE (DELETE /api/armas/{id}): Elimina un arma de la base de datos H2 por su ID.
+     */
+    @DeleteMapping("/api/armas/{id:\\d+}")
+    public ResponseEntity<Map<String, Object>> eliminarArma(@PathVariable Long id) {
+        armaService.eliminarArma(id);
+        Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("mensaje", "Arma eliminada correctamente");
+        respuesta.put("idEliminado", id);
+        return ResponseEntity.ok(respuesta);
+    }
+
+    // ==========================================
+    // Endpoints de Dominio / Polimorfismo / Sobrecarga
+    // ==========================================
+
+    /**
+     * Consigna 4: Construye una instancia del dominio a partir de parámetros de la URL,
+     * la valida mediante ArmaService y la persiste en H2.
      */
     @GetMapping({"/api/armas", "/api/armas/construir"})
     public Map<String, Object> construirArma(
@@ -38,13 +97,10 @@ public class ArmaController {
             @RequestParam(name = "daño", required = false) Integer daño,
             @RequestParam(name = "equipo", required = false) String equipoNombre) {
 
-        Equipo equipo = (equipoNombre != null && !equipoNombre.trim().isEmpty())
-                ? new Equipo(equipoNombre)
-                : new Equipo("Counter-Terrorista");
-
-        Arma arma = fabricarArma(nombre, daño, municion, equipo);
+        Arma arma = armaService.construirYGuardarArma(nombre, daño, municion, equipoNombre);
 
         Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("id", arma.getId());
         respuesta.put("arma", arma.getNombre());
         respuesta.put("municion", arma.getMunicion());
         respuesta.put("capacidadCargador", arma.getCapacidadCargador());
@@ -58,20 +114,10 @@ public class ArmaController {
 
     /**
      * Consigna 5: Respuesta en JSON al pedirle el mensaje abstracto a cada clase hija.
-     * El controller habla con ambas como si fueran el tipo padre Arma (polimorfismo).
-     * El texto proviene de los métodos sobreescritos en cada clase concreta.
      */
     @GetMapping("/api/armas/polimorfismo")
     public List<Map<String, Object>> demostrarPolimorfismo() {
-        // Dos clases hijas independientes (y otras especializaciones) tratadas a través del tipo base Arma
-        List<Arma> armas = List.of(
-                new M4A4(),
-                new MP9(),
-                new DesertEagle(),
-                new Glock18(),
-                new Nova(),
-                new GranadaHE()
-        );
+        List<Arma> armas = armaService.obtenerCatalogoPolimorfico();
 
         List<Map<String, Object>> lista = new ArrayList<>();
         for (Arma arma : armas) {
@@ -80,7 +126,6 @@ public class ArmaController {
             item.put("claseJava", arma.getClass().getSimpleName());
             item.put("tipoPadre", Arma.class.getSimpleName());
             item.put("municion", arma.getMunicion() + "/" + arma.getCapacidadCargador());
-            // Invocación polimórfica de métodos abstractos sobreescritos
             item.put("comportamientoDeCombate", arma.comportamientoDeCombate());
             item.put("resultadoDisparo", arma.disparar());
             lista.add(item);
@@ -89,8 +134,7 @@ public class ArmaController {
     }
 
     /**
-     * Consigna 7: Demuestra la sobrecarga del mensaje del dominio
-     * (disparar sin más datos, o disparar indicando una distancia y headshot).
+     * Consigna 7: Demuestra la sobrecarga del mensaje del dominio.
      */
     @GetMapping("/api/armas/disparar")
     public Map<String, Object> dispararArma(
@@ -98,17 +142,15 @@ public class ArmaController {
             @RequestParam(name = "distancia", required = false) Integer distancia,
             @RequestParam(name = "headshot", defaultValue = "false") boolean headshot) {
 
-        Arma arma = fabricarArma(nombre, null, null, new Equipo("Counter-Terrorista"));
+        Arma arma = armaService.fabricarArma(nombre, null, null, new Equipo("Counter-Terrorista"));
 
         String resultadoAccion;
         String metodoSobrecargadoUsado;
 
         if (distancia == null) {
-            // Sobrecarga 1: disparar() sin argumentos (disparo estándar a quemarropa)
             resultadoAccion = arma.disparar();
             metodoSobrecargadoUsado = "disparar() [sin argumentos]";
         } else {
-            // Sobrecarga 2 y 3: disparar(distancia) o disparar(distancia, headshot)
             resultadoAccion = arma.disparar(distancia, headshot);
             metodoSobrecargadoUsado = "disparar(distancia=" + distancia + ", headshot=" + headshot + ")";
         }
@@ -122,10 +164,51 @@ public class ArmaController {
     }
 
     /**
-     * Manejador de excepciones del dominio: cuando un valor viola una regla de negocio
-     * (invariante protegido), la capa de dominio rechaza la mutación y el controller
-     * informa el resultado al cliente con código HTTP 400 Bad Request.
+     * Regla de Negocio en Counter-Strike 2 (Simulación de Granadas / Explosivos):
+     * Participan 3 clases del modelo (Equipo, Granada y GranadaHE) validando fuego amigo,
+     * radio de onda expansiva (5.0m), absorción de chaleco Kevlar y persistencia en H2.
      */
+    @GetMapping({"/api/armas/granadas/simular", "/api/armas/explosivos/simular"})
+    public ResponseEntity<Map<String, Object>> simularExplosionGranada(
+            @RequestParam(name = "equipoAtacante", defaultValue = "Counter-Terrorista") String equipoAtacante,
+            @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
+            @RequestParam(name = "distancia", defaultValue = "2.0") double distancia,
+            @RequestParam(name = "chaleco", defaultValue = "true") boolean chaleco,
+            @RequestParam(name = "fuegoAmigo", defaultValue = "false") boolean fuegoAmigo,
+            @RequestParam(name = "dañoBase", defaultValue = "98") int dañoBase) {
+
+        Map<String, Object> resultado = armaService.simularExplosionGranada(
+                equipoAtacante, equipoObjetivo, distancia, chaleco, fuegoAmigo, dañoBase
+        );
+        return ResponseEntity.ok(resultado);
+    }
+
+    /**
+     * Demuestra la segunda jerarquía del dominio (Agente -> AgenteCT y AgenteTerrorista).
+     */
+    @GetMapping("/api/agentes/polimorfismo")
+    public List<Map<String, Object>> demostrarPolimorfismoAgentes() {
+        List<Agente> agentes = armaService.obtenerAgentesPolimorfismo();
+        List<Map<String, Object>> lista = new ArrayList<>();
+        for (Agente agente : agentes) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("agente", agente.getNombre());
+            item.put("claseJava", agente.getClass().getSimpleName());
+            item.put("tipoPadre", Agente.class.getSimpleName());
+            item.put("equipo", agente.getEquipo().getNombre());
+            item.put("vida", agente.getVida());
+            item.put("chalecoKevlar", agente.getChalecoKevlar());
+            item.put("rolTactico", agente.rolTactico());
+            item.put("accionEspecial", agente.ejecutarAccionEspecial());
+            lista.add(item);
+        }
+        return lista;
+    }
+
+    // ==========================================
+    // Manejadores de Excepciones HTTP
+    // ==========================================
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> manejarReglaViolada(IllegalArgumentException ex) {
         Map<String, Object> error = new LinkedHashMap<>();
@@ -135,53 +218,12 @@ public class ArmaController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    private Arma fabricarArma(String nombre, Integer daño, Integer municion, Equipo equipo) {
-        if (nombre == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El parámetro 'nombre' es requerido.");
-        }
-
-        String n = nombre.trim();
-        boolean usaPersonalizado = (daño != null || municion != null);
-
-        if (n.equalsIgnoreCase("M4A4")) {
-            if (usaPersonalizado) {
-                int d = (daño != null) ? daño : 30;
-                int m = (municion != null) ? municion : 30;
-                return new M4A4(d, m, equipo);
-            }
-            return new M4A4(equipo);
-        } else if (n.equalsIgnoreCase("MP9")) {
-            if (usaPersonalizado) {
-                int d = (daño != null) ? daño : 24;
-                int m = (municion != null) ? municion : 30;
-                return new MP9(d, m, equipo);
-            }
-            return new MP9(equipo);
-        } else if (n.equalsIgnoreCase("DesertEagle") || n.equalsIgnoreCase("Deagle")) {
-            if (usaPersonalizado) {
-                int d = (daño != null) ? daño : 40;
-                int m = (municion != null) ? municion : 7;
-                return new DesertEagle(d, m, equipo);
-            }
-            return new DesertEagle(equipo);
-        } else if (n.equalsIgnoreCase("Glock18") || n.equalsIgnoreCase("Glock")) {
-            if (usaPersonalizado) {
-                int d = (daño != null) ? daño : 20;
-                int m = (municion != null) ? municion : 20;
-                return new Glock18(d, m, equipo);
-            }
-            return new Glock18(equipo);
-        } else if (n.equalsIgnoreCase("Nova")) {
-            if (usaPersonalizado) {
-                int d = (daño != null) ? daño : 26;
-                int m = (municion != null) ? municion : 8;
-                return new Nova(d, m, equipo);
-            }
-            return new Nova(equipo);
-        } else if (n.equalsIgnoreCase("GranadaHE") || n.equalsIgnoreCase("Granada")) {
-            return new GranadaHE(equipo);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Arma desconocida en el arsenal: " + nombre);
-        }
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<Map<String, Object>> manejarNoEncontrado(NoSuchElementException ex) {
+        Map<String, Object> error = new LinkedHashMap<>();
+        error.put("error", "Recurso no encontrado");
+        error.put("mensaje", ex.getMessage());
+        error.put("estado", HttpStatus.NOT_FOUND.value());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 }

@@ -19,9 +19,15 @@ public class IndexController {
 
         Map<String, String> endpoints = new LinkedHashMap<>();
         endpoints.put("inicio", "GET /");
+        endpoints.put("crearArmaCrud", "POST /api/armas");
+        endpoints.put("listarArmasCrud", "GET /api/armas/todas");
+        endpoints.put("obtenerArmaPorIdCrud", "GET /api/armas/{id}");
+        endpoints.put("actualizarArmaCrud", "PUT /api/armas/{id}");
+        endpoints.put("eliminarArmaCrud", "DELETE /api/armas/{id}");
         endpoints.put("construirArma", "GET /api/armas?nombre=M4A4&municion=30&daño=30&equipo=Counter-Terrorista");
         endpoints.put("polimorfismo", "GET /api/armas/polimorfismo");
         endpoints.put("disparar", "GET /api/armas/disparar?nombre=M4A4&distancia=25&headshot=true");
+        endpoints.put("simularGranada", "GET /api/armas/granadas/simular?equipoAtacante=Counter-Terrorista&equipoObjetivo=Terrorista&distancia=2.0&chaleco=true");
         respuesta.put("endpoints", endpoints);
 
         return respuesta;
