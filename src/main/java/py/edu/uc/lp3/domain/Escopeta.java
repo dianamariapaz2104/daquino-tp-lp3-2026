@@ -1,5 +1,8 @@
 package py.edu.uc.lp3.domain;
 
+import jakarta.persistence.MappedSuperclass;
+
+@MappedSuperclass
 public abstract class Escopeta extends Arma {
 
     private int perdigones;

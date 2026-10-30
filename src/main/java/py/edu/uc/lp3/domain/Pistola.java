@@ -1,8 +1,14 @@
 package py.edu.uc.lp3.domain;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
+
+@MappedSuperclass
 public abstract class Pistola extends Arma {
 
     private int capacidadCargadorPistola;
+
+    @Column(name = "modo_disparo_pistola")
     private String modoDisparo;
 
     public Pistola() {

@@ -1,5 +1,10 @@
 package py.edu.uc.lp3.domain;
 
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("Glock18")
 public class Glock18 extends Pistola {
 
     public Glock18() {

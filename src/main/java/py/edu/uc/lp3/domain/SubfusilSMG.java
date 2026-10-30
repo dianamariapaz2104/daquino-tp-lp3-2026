@@ -1,5 +1,8 @@
 package py.edu.uc.lp3.domain;
 
+import jakarta.persistence.MappedSuperclass;
+
+@MappedSuperclass
 public abstract class SubfusilSMG extends Arma {
 
     private float cadenciaFuego;

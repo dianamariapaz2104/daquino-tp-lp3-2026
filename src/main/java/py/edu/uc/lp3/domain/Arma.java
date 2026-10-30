@@ -1,13 +1,51 @@
 package py.edu.uc.lp3.domain;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import jakarta.persistence.DiscriminatorColumn;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "armas")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "tipo_arma")
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.EXISTING_PROPERTY,
+        property = "tipoArma",
+        visible = true,
+        defaultImpl = M4A4.class
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = M4A4.class, name = "M4A4"),
+        @JsonSubTypes.Type(value = MP9.class, name = "MP9"),
+        @JsonSubTypes.Type(value = DesertEagle.class, name = "DesertEagle"),
+        @JsonSubTypes.Type(value = Glock18.class, name = "Glock18"),
+        @JsonSubTypes.Type(value = Nova.class, name = "Nova"),
+        @JsonSubTypes.Type(value = GranadaHE.class, name = "GranadaHE")
+})
 public abstract class Arma {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     private String nombre;
     private int daño;
     private float precision;
     private float tiempoRecarga;
     private int precio;
+
+    @Embedded
     private Equipo equipo;
+
     private int municion;
     private int capacidadCargador;
 
@@ -154,13 +192,70 @@ public abstract class Arma {
                 + " | Munición: " + municion + "/" + capacidadCargador;
     }
 
-    // Getters públicos (invariantes protegidos, sin setters directos de munición/daño)
+    // Getters y Setters con invariantes protegidos para JPA y serialización JSON
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getTipoArma() { return this.getClass().getSimpleName(); }
+
     public String getNombre() { return nombre; }
+    public void setNombre(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del arma no puede ser nulo ni vacío.");
+        }
+        this.nombre = nombre.trim();
+    }
+
     public int getDaño() { return daño; }
+    public void setDaño(int daño) {
+        if (daño <= 0) {
+            throw new IllegalArgumentException("El daño debe ser mayor a cero: " + daño);
+        }
+        this.daño = daño;
+    }
+
     public float getPrecision() { return precision; }
+    public void setPrecision(float precision) {
+        if (precision < 0.0f || precision > 1.0f) {
+            throw new IllegalArgumentException("La precisión debe estar comprendida entre 0.0 y 1.0: " + precision);
+        }
+        this.precision = precision;
+    }
+
     public float getTiempoRecarga() { return tiempoRecarga; }
+    public void setTiempoRecarga(float tiempoRecarga) {
+        if (tiempoRecarga < 0.0f) {
+            throw new IllegalArgumentException("El tiempo de recarga no puede ser negativo: " + tiempoRecarga);
+        }
+        this.tiempoRecarga = tiempoRecarga;
+    }
+
     public int getPrecio() { return precio; }
+    public void setPrecio(int precio) {
+        if (precio < 0) {
+            throw new IllegalArgumentException("El precio no puede ser negativo: " + precio);
+        }
+        this.precio = precio;
+    }
+
     public Equipo getEquipo() { return equipo; }
+    public void setEquipo(Equipo equipo) {
+        this.equipo = (equipo != null) ? equipo : new Equipo("Counter-Terrorista");
+    }
+
     public int getMunicion() { return municion; }
+    public void setMunicion(int municion) {
+        if (municion < 0) {
+            throw new IllegalArgumentException("La munición no puede ser negativa: " + municion);
+        }
+        this.municion = municion;
+    }
+
     public int getCapacidadCargador() { return capacidadCargador; }
+    public void setCapacidadCargador(int capacidadCargador) {
+        if (capacidadCargador <= 0) {
+            throw new IllegalArgumentException("La capacidad del cargador debe ser positiva: " + capacidadCargador);
+        }
+        this.capacidadCargador = capacidadCargador;
+    }
 }

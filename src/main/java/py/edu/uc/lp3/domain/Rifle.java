@@ -1,7 +1,12 @@
 package py.edu.uc.lp3.domain;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.MappedSuperclass;
+
+@MappedSuperclass
 public abstract class Rifle extends Arma {
 
+    @Column(name = "modo_disparo_rifle")
     private String modoDisparo;
     private float retroceso;
 
