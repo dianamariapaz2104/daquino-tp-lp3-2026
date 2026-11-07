@@ -1,30 +1,29 @@
-# Counter-Strike 2 - API REST con H2, Reglas de Juego, Interfaz y Excepciones (TP LP3 - POO-08)
+# Counter-Strike 2 - API REST (TP LP3 - POO-08)
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Trabajo práctico de **Lenguaje de Programación 3 (CYT646)**. Es un servicio HTTP desarrollado con **Spring Boot 3.3.4**, **Spring Data JPA** y base de datos **H2** sobre el dominio de **Counter-Strike 2**, respetando la arquitectura en capas (`Controller` -> `Service` -> `Repository`), persistencia de tres clases/familias del modelo (`Arma`, `Agente` y `Equipo`), protocolo de dominio (`InspeccionableEnPartida`), simulación persistida alimentada por dos reglas de negocio del juego y una jerarquía de excepciones del dominio (`ReglaDeJuegoException` -> `MunicionInsuficienteException` y `FuegoAmigoException`) con un `@ExceptionHandler` HTTP por tipo.
+Trabajo práctico de Lenguaje de Programación 3. Es un servicio web hecho con Spring Boot 3.3.4, Spring Data JPA y base de datos H2 que modela las armas, agentes y equipos del juego Counter-Strike 2 respetando la arquitectura en capas (`Controller` -> `Service` -> `Repository`).
 
-> **Enlace exacto al commit de la solución (POO-08):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/1c30587c801668c9619dd0201fbf2eaa71f654db  
+Para armar esto usé herencia, polimorfismo, encapsulamiento, una interfaz de dominio (`InspeccionableEnPartida`), invariantes y una jerarquía de excepciones propias (`ReglaDeJuegoException`, `MunicionInsuficienteException` y `FuegoAmigoException`).
+
+> **Enlace exacto al commit de la solución (POO-08):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/db037aed8fcbf7512b2bbc6cf4d135a3d86d5236  
 > **Commit anterior (CRUD H2 inicial):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/465a7d8726658c6525f6a1041c2ff58f26a11635  
 > **Commit de la entrega POO-06:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/f8757155883626bc2b6ccb6883b07afd4650fa70
 
 ---
 
-## 1. Cómo arrancar el servicio y abrir la consola H2
+## Cómo correrlo
 
-Con **Java 21**, desde la raíz del proyecto se arranca el servidor con:
+Con Java 21, se puede levantar el proyecto desde la terminal así:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-- **Servicio vivo:** `http://localhost:8080/`
-- **Consola H2:** `http://localhost:8080/h2-console`
-  - **JDBC URL:** `jdbc:h2:file:./data/armas`
-  - **User Name:** `sa`
-  - **Password:** *(dejar vacío)*
+- Para ver si funciona se entra a `http://localhost:8080/`.
+- La consola de la base de datos H2 está en `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./data/armas`, usuario: `sa`, contraseña vacía).
 
-Para ejecutar la suite de **20 pruebas automatizadas** (unitarias de dominio e integración MockMvc + H2):
+Para correr los tests del proyecto:
 
 ```bash
 ./mvnw test
@@ -32,119 +31,104 @@ Para ejecutar la suite de **20 pruebas automatizadas** (unitarias de dominio e i
 
 ---
 
-## 2. Propiedades de H2 y JPA explicadas (`src/main/resources/application.properties`)
+## Propiedades de H2 en `application.properties`
 
-Cada propiedad configurada en `application.properties` cumple una función específica:
-
-- **`spring.application.name=cs2`**: Define el nombre identificador de la aplicación dentro del contexto de Spring Boot.
-- **`spring.datasource.url=jdbc:h2:file:./data/armas`**: Indica a H2 que guarde los datos en un archivo local (`./data/armas.mv.db`) para que el estado persista en disco entre peticiones y reinicios.
-- **`spring.datasource.driverClassName=org.h2.Driver`**: Especifica el driver JDBC oficial de H2 que utiliza el pool de conexiones HikariCP para comunicarse con el motor.
-- **`spring.datasource.username=sa`**: Configura el usuario administrador por defecto (`System Administrator`) de la base de datos H2 en entorno de desarrollo.
-- **`spring.datasource.password=`**: Define la contraseña vacía por defecto para el usuario `sa` en el perfil local del taller.
-- **`spring.h2.console.enabled=true`**: Habilita la interfaz web interactiva en `/h2-console` para inspeccionar las tablas `ARMAS` y `AGENTES` con consultas SQL desde el navegador.
-- **`spring.jpa.hibernate.ddl-auto=update`**: Ordena a Hibernate crear o actualizar automáticamente las tablas y columnas del esquema relacional a partir de las entidades `@Entity` sin borrar los datos existentes.
-- **`spring.jpa.defer-datasource-initialization=true`**: Asegura que Hibernate termine de construir el esquema de tablas antes de ejecutar cualquier inicialización de datos.
-- **`spring.jpa.show-sql=true`**: Muestra en la consola las sentencias SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) que Hibernate ejecuta contra H2.
-- **`spring.jpa.properties.hibernate.format_sql=true`**: Formatea e indenta las sentencias SQL impresas en la terminal para facilitar su lectura durante las pruebas.
+- **`spring.application.name=cs2`**: Le da el nombre `cs2` a la aplicación en Spring Boot.
+- **`spring.datasource.url=jdbc:h2:file:./data/armas`**: Configura H2 para que guarde los datos en el archivo local `./data/armas.mv.db` y no se pierdan al apagar la app.
+- **`spring.datasource.driverClassName=org.h2.Driver`**: Indica que se usa el driver JDBC de H2 para conectarse a la base.
+- **`spring.datasource.username=sa`**: Define el usuario administrador por defecto de H2 (`sa`).
+- **`spring.datasource.password=`**: Deja la contraseña en blanco para el usuario `sa` en desarrollo.
+- **`spring.h2.console.enabled=true`**: Activa la consola web en `/h2-console` para poder ver las tablas desde el navegador.
+- **`spring.jpa.hibernate.ddl-auto=update`**: Hace que Hibernate cree o actualice las tablas automáticamente según las clases `@Entity` sin borrar los datos ya cargados.
+- **`spring.jpa.defer-datasource-initialization=true`**: Espera a que Hibernate arme las tablas antes de correr cualquier carga inicial.
+- **`spring.jpa.show-sql=true`**: Muestra en la consola las consultas SQL que se van ejecutando.
+- **`spring.jpa.properties.hibernate.format_sql=true`**: Acomoda el SQL en varias líneas en la terminal para que sea más fácil de leer.
 
 ---
 
-## 3. Las dos reglas de negocio del juego (en una frase cada una)
+## Las dos reglas de negocio del juego
 
-En la simulación participan las tres clases/familias principales del modelado (`Arma` con sus subclases como `DesertEagle`, `M4A4` y `GranadaHE`; `Agente` con sus subclases `AgenteCT` y `AgenteTerrorista`; y `Equipo`):
+En la simulación participan las tres clases principales de mi modelo (`Arma` con sus hijas como `DesertEagle`, `M4A4` y `GranadaHE`; `Agente` con sus hijas `AgenteCT` y `AgenteTerrorista`; y `Equipo`):
 
-1. **Regla 1 — Validación de Munición, Cargador y Fuego Amigo (`Arma` / `GranadaHE` / `Equipo`):** Un `Arma` solo puede ejecutar un disparo o recarga si posee proyectiles disponibles en el cargador (`municion > 0`) sin exceder su `capacidadCargador` (de lo contrario lanza `MunicionInsuficienteException`) y si el `Equipo` del `Agente` objetivo no pertenece al mismo bando cuando el fuego amigo competitivo está desactivado (de lo contrario lanza `FuegoAmigoException`).
-2. **Regla 2 — Cálculo de Daño Balístico/Explosivo y Absorción de Kevlar (`Arma` / `Agente`):** Al impactar sobre un `Agente`, el `Arma` descuenta un proyectil de su cargador, calcula el daño atenuado según la distancia y el multiplicador crítico de *headshot* (o radio de onda expansiva en `GranadaHE`), y el `Agente` absorbe el 35% del impacto en su `chalecoKevlar` antes de descontar el daño restante de sus puntos de `vida` en H2.
-
----
-
-## 4. Cambios de Sobrecarga y Sobreescritura
-
-- **Sobrecarga (*Overloading* — misma clase, mismo nombre de método, distinta lista de parámetros):**
-  - En `Arma` (y en sus subclases) definí **3 constructores sobrecargados**: el constructor sin argumentos `Arma()` (que también usa JPA y deja valores legales por defecto), el constructor intermedio de 7 parámetros y el constructor completo de 8 parámetros.
-  - En `Arma` sobrecargué el método `disparar()`: sin parámetros (`disparar()`), con distancia (`disparar(int distanciaMetros)`) y con distancia más tiro a la cabeza (`disparar(int distanciaMetros, boolean tiroALaCabeza)`). También sobrecargué `recargar()` y `recargar(int balas)`, y en `GranadaHE` sobrecargué `detonarEnArea(...)`.
-- **Sobreescritura (*Overriding* — relación padre-hija con `@Override`, misma firma, comportamiento propio polimórfico):**
-  - En la jerarquía `Arma`, la clase base declara los métodos abstractos `comportamientoDeCombate()` y `disparar()`, y cada clase hija (`M4A4`, `MP9`, `DesertEagle`, `Glock18`, `Nova`, `GranadaHE`) los sobreescribe con `@Override`.
-  - En la jerarquía `Agente`, la clase base declara `rolTactico()` y `ejecutarAccionEspecial()`, y las clases hijas `AgenteCT` y `AgenteTerrorista` los sobreescriben con `@Override` (desactivar C4 con Defuse Kit vs plantar C4 con código `7355608`).
+1. **Regla 1 (munición, cargador y fuego amigo en `Arma`, `GranadaHE` y `Equipo`):** Un `Arma` solo puede disparar si le quedan balas en el cargador (`municion > 0`) y solo permite recargar cuando no está lleno y las balas son positivas (si no, lanza `MunicionInsuficienteException`), además de bloquear ataques contra un `Agente` del mismo `Equipo` si el fuego amigo está desactivado (lanzando `FuegoAmigoException`).
+2. **Regla 2 (daño y absorción de Kevlar en `Arma` y `Agente`):** Cuando el disparo o explosión impacta en un `Agente`, el `Arma` descuenta 1 proyectil, calcula el daño según la distancia y si fue headshot, y el `Agente` absorbe el 35% del golpe en su `chalecoKevlar` antes de restar el daño de su `vida` en H2.
 
 ---
 
-## 5. Respuestas a «Qué hay que pensar» del enunciado
+## ¿Qué cambió con la sobrecarga y sobreescritura?
 
-### Recurso y verbo
-El sustantivo principal de la API es `/api/armas` (acompañado por `/api/agentes`). La URL nombra siempre al recurso (`armas`, `armas/{id}`) y el verbo HTTP indica la operación: `POST /api/armas` para crear (`201 Created`), `GET /api/armas/todas` y `GET /api/armas/{id}` para leer (`200 OK`), `PUT /api/armas/{id}` para actualizar (`200 OK`) y `DELETE /api/armas/{id}` para borrar (`200 OK`).
+**Sobrecarga:**
+En `Arma` y en las clases hijas armé 3 constructores sobrecargados: uno vacío (que también sirve para JPA y deja valores válidos por defecto), uno intermedio y otro completo que recibe todos los datos.
+También sobrecargué `disparar()` (sin parámetros, con distancia, y con distancia más `tiroALaCabeza`), `recargar()` y `detonarEnArea()`. Así uso el mismo nombre de método con distinta cantidad de parámetros según lo que necesite.
 
-### Identidad
-El campo clave es `id` de tipo `Long`, anotado con `@Id` y `@GeneratedValue(strategy = GenerationType.IDENTITY)` en `Arma` y en `Agente`. Lo asigna automáticamente la base de datos H2 mediante una columna autoincremental al insertar la fila, por lo que el JSON de creación (`POST`) omite el campo `id` y el servidor lo devuelve asignado en la respuesta `201 Created`.
-
-### Herencia y tablas
-Elegí la estrategia `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` con `@DiscriminatorColumn(name = "tipo_arma")` para `Arma` y `@DiscriminatorColumn(name = "tipo_agente")` para `Agente`. En este dominio todas las armas comparten el núcleo de atributos balísticos (`daño`, `precision`, `precio`, `municion`, `capacidadCargador`) y las subclases agregan pocos campos específicos, por lo que una tabla única evita múltiples `JOIN` innecesarios al listar el arsenal polimórfico. En el JSON el subtipo se distingue mediante `@JsonTypeInfo` y `@JsonSubTypes` de Jackson sobre la propiedad `"tipoArma"` (ej. `"DesertEagle"`, `"M4A4"`, `"GranadaHE"`).
-
-### Interfaz y repositorio
-`ArmaRepository` y `AgenteRepository` son interfaces que extienden `JpaRepository`. Al depender de una interfaz, `ArmaService` y `ArmaController` se acoplan únicamente al contrato de mensajes (`save`, `findById`, `findAll`, `findByNombreIgnoreCase`) sin conocer el código SQL ni la implementación concreta que Spring Data genera en tiempo de ejecución, aplicando el mismo principio de inversión de dependencias y polimorfismo que vimos con los protocolos en POO-07.
-
-### Protocolo del dominio
-Definí la interfaz propia `InspeccionableEnPartida` en `py.edu.uc.lp3.domain` con los métodos `inspeccionarEnPartida()` y `calcularValorEconomico()`. La usa el endpoint de lectura `GET /api/armas/protocolo` (y `/api/protocolo`), que recorre una `List<InspeccionableEnPartida>` capaz de hablar de forma transparente con instancias de **dos familias distintas**: la jerarquía `Arma` y la jerarquía `Agente`.
-
-### Ocultamiento (frente al JSON y frente a JPA)
-Las reglas numéricas del juego las sostienen los constructores y los setters validados de `Arma`, `Agente` y `Equipo` (además de las reglas de presupuesto en `ArmaService`). El constructor sin argumentos que exige JPA inicializa el objeto con valores legales por defecto y todos los setters verifican los invariantes antes de mutar el estado, impidiendo que Jackson o JPA dejen munición o daño negativos. En la colección de Insomnia, el pedido **`06. POST /api/armas (Ilegal)`** envía `"daño": -10` y `"municion": -5`, recibe `400 Bad Request`, y al ejecutar nuevamente **`03. GET /api/armas/todas`** se comprueba que la tabla en H2 quedó intacta sin basura.
-
-### PUT y PATCH
-En nuestra API usamos `PUT /api/armas/{id}`, el cual reemplaza el estado completo de los atributos editables del recurso existente (`nombre`, `daño`, `precision`, `tiempoRecarga`, `precio`, `equipo`, `capacidadCargador`, `municion`). Si en el cuerpo JSON de un `PUT` se omite un campo primitivo numérico (como `daño`), Jackson lo deserializa como `0`, lo cual dispara inmediatamente el invariante del dominio (`daño <= 0`) y rechaza la petición con `400 Bad Request` para evitar sobrescribir el arma con valores inválidos.
-
-### DELETE
-En nuestro modelo, borrar (`DELETE /api/armas/{id}`) significa retirar definitivamente esa pieza de armamento del inventario persistido en H2 (`armaRepository.delete(existente)`). Ese verbo HTTP verifica primero que el recurso exista en la base (si no está, lanza `NoSuchElementException` -> `404 Not Found`) y elimina la fila de la tabla `ARMAS`; un `GET /api/armas/{id}` posterior devuelve `404 Not Found`.
-
-### Dos reglas y simulación
-Los dos hechos del juego que cambian el estado de más de un objeto a la vez son el **disparo/detonación con validación de munición y fuego amigo** y la **recepción de daño balístico/explosivo con desgaste de chaleco Kevlar y vida**. El recurso HTTP de la simulación es `POST /api/armas/{id}/simular` (además de `/api/armas/granadas/simular`). Al ejecutarlo, se descuenta 1 proyectil del `Arma` y se reducen el `chalecoKevlar` y la `vida` del `Agente` objetivo; ambos cambios se guardan en H2 y un `GET /api/armas/{id}` (o `GET /api/agentes/todos`) posterior muestra el nuevo estado ya persistido.
-
-### Excepciones (jerarquía y comprobadas vs no comprobadas)
-La jerarquía de excepciones del dominio tiene como clase base a `ReglaDeJuegoException` y dos clases hijas nombradas según la regla específica que falló:
-1. `MunicionInsuficienteException` (cuando se intenta disparar con cargador en `0` o recargar una cantidad inválida / con el cargador lleno -> respondida con **`409 Conflict`**).
-2. `FuegoAmigoException` (cuando se intenta atacar a un `Agente` del mismo `Equipo` con fuego amigo deshabilitado -> respondida con **`422 Unprocessable Entity`**).
-
-Un recurso inexistente (`NoSuchElementException` -> `404 Not Found`) y un invariante básico de construcción (`IllegalArgumentException` -> `400 Bad Request`) son tipos distintos de las excepciones de reglas tácticas de partida. El JSON de error incluye `error`, `tipoExcepcion`, `jerarquiaPadre`, `reglaViolada`, `mensaje`, datos de contexto (`arma`/`municionActual` o `equipo`/`accionBloqueada`) y `estado`. Elegimos **excepciones no comprobadas** (*unchecked*, extendiendo `RuntimeException`) porque representan violaciones a precondiciones y reglas del dominio que deben hacer *rollback* automático de la transacción `@Transactional` de Spring sin ensuciar las firmas de los métodos ni de las interfaces con cláusulas `throws`.
-
-### Preguntas de anclaje de la cátedra
-- **¿Si mañana cambiamos H2 por otra base (ej. PostgreSQL), qué archivos tocan y cuáles se quedan quietos?**  
-  Solo se tocan `pom.xml` (para agregar el driver JDBC de PostgreSQL) y `src/main/resources/application.properties` (para cambiar `spring.datasource.url`, `driverClassName`, usuario y clave). Todas las clases del dominio (`domain`), los repositorios (`repository`), el servicio (`service`) y los controladores (`rest.controller`) **se quedan completamente quietos**.
-- **¿Quién lanza la excepción, el controller o el objeto del juego?**  
-  La excepción la lanza **el objeto del juego en el dominio** (`Arma` y `GranadaHE` lanzan `MunicionInsuficienteException` y `FuegoAmigoException` en sus propios métodos `dispararContraAgente`, `cargarMunicionValidada` y `detonarEnArea`). El `ArmaController` solo recibe el pedido HTTP, invoca al servicio/dominio y captura cada excepción en su `@ExceptionHandler` correspondiente para traducirla a JSON y código de estado HTTP.
+**Sobreescritura (Overriding):**
+En la clase abstracta `Arma` declaré `comportamientoDeCombate()` y `disparar()`, y en la clase abstracta `Agente` declaré `rolTactico()` y `ejecutarAccionEspecial()`. Después, en cada clase hija (`M4A4`, `MP9`, `DesertEagle`, `Glock18`, `Nova`, `GranadaHE`, `AgenteCT` y `AgenteTerrorista`) usé `@Override` para darle su comportamiento propio.
 
 ---
 
-## 6. Cómo importar y recorrer la colección de Insomnia
+## Respuestas a «Qué hay que pensar»
 
-El archivo de la colección está versionado en **`insomnia/insomnia-cs2-collection.json`**.
+**Recurso y verbo:**  
+El sustantivo principal de mi API es `/api/armas` (y `/api/agentes`). La URL nombra al recurso y el verbo HTTP dice qué operación se hace: `POST` para crear (`201 Created`), `GET` para leer (`200 OK`), `PUT` para actualizar (`200 OK`) y `DELETE` para borrar (`200 OK`).
 
-### Pasos para importar en Insomnia:
-1. Abrir **Insomnia** -> hacer clic en **Import** (o `Application` -> `Preferences` -> `Data` -> `Import Data`).
-2. Seleccionar el archivo `insomnia/insomnia-cs2-collection.json` del repositorio.
-3. Verificar que esté activo el entorno **Base Environment** (`base_url = http://localhost:8080`, `arma_id = 1`).
+**Identidad:**  
+La clave primaria es el atributo `id` (`Long`) anotado con `@Id` y `@GeneratedValue(strategy = GenerationType.IDENTITY)`. La asigna directamente la base de datos H2 de forma autoincremental al guardar, así que en el JSON del `POST` no se manda el `id` y el servidor lo devuelve creado.
 
-### Orden de recorrido paso a paso (pedidos 01 al 12):
-1. **`01. GET /`**: Confirma que el servicio está vivo (`200 OK`).
-2. **`02. POST /api/armas`**: Crea una `DesertEagle` válida en H2 y devuelve `201 Created` con su `"id"` (si el `id` devuelto es distinto de `1`, actualizar la variable `arma_id` en el entorno de Insomnia).
-3. **`03. GET /api/armas/todas`**: Lista la colección desde H2 y muestra el arma recién persistida.
-4. **`04. GET /api/armas/{id}`**: Consulta el arma por su `id` (`200 OK`, `"municion": 7`).
-5. **`05. PUT /api/armas/{id}`**: Actualiza el nombre a `"Desert Eagle Printstream"`, daño a `50` y precio a `750` (`200 OK`). Un `GET` posterior confirma el cambio.
-6. **`06. POST /api/armas (Ilegal)`**: Envía daño `-10` y munición `-5`; recibe `400 Bad Request` y la colección en H2 no crece con basura.
-7. **`07. GET /api/armas/9999`**: Consulta un `id` inexistente y recibe `404 Not Found`.
-8. **`08. GET /api/armas/protocolo`**: Ejecuta el endpoint del protocolo `InspeccionableEnPartida` devolviendo instancias de ambas familias (`Arma` y `Agente`).
-9. **`09. POST /api/armas/{id}/simular`**: Ejecuta la simulación en el caso feliz (contra `Terrorista` a `15m` con `headshot=true`). Descuenta la munición de `7` a `6` en el `Arma` y reduce la vida y el Kevlar del `Agente` en H2. Si volvés a ejecutar el pedido **`04. GET /api/armas/{id}`**, verás `"municion": 6` persistido en H2.
-10. **`10. POST /api/armas/{id}/recargar?balas=0`**: Dispara la **Excepción Hija 1 (`MunicionInsuficienteException`)**; su handler específico responde **`409 Conflict`** con `"tipoExcepcion": "MunicionInsuficienteException"`.
-11. **`11. POST /api/armas/{id}/simular (Mismo Equipo)`**: Dispara la **Excepción Hija 2 (`FuegoAmigoException`)** al atacar a `Counter-Terrorista` con `fuegoAmigo=false`; su handler específico responde **`422 Unprocessable Entity`** con `"tipoExcepcion": "FuegoAmigoException"`.
-12. **`12. DELETE /api/armas/{id}`**: Elimina el arma de H2 (`200 OK`). Si ejecutás **`04. GET /api/armas/{id}`** después, responde **`404 Not Found`**.
+**Herencia y tablas:**  
+Elegí `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` con la columna discriminadora `tipo_arma` en `Arma` y `tipo_agente` en `Agente`. Lo hice así porque todas las armas comparten casi todos los mismos datos (`daño`, `precision`, `precio`, `municion`, `capacidadCargador`) y es mucho más directo consultarlas en una sola tabla sin cruzar varias tablas con `JOIN`. En el JSON, Jackson distingue de qué subclase se trata usando el campo `"tipoArma"` con `@JsonTypeInfo` y `@JsonSubTypes`.
+
+**Interfaz y repositorio:**  
+`ArmaRepository` y `AgenteRepository` son interfaces que extienden `JpaRepository`. Al depender de la interfaz, el servicio y el controller solo llaman a métodos como `save()`, `findById()` o `findAll()` sin importarles cómo se hace el SQL por detrás, igual que pasa con el polimorfismo de las interfaces que vimos en POO-07.
+
+**Protocolo del dominio:**  
+Armé la interfaz `InspeccionableEnPartida` en el paquete `domain` con los métodos `inspeccionarEnPartida()` y `calcularValorEconomico()`. La usa el endpoint `GET /api/armas/protocolo`, que junta en una misma lista objetos de dos familias distintas (`Arma` y `Agente`) y los recorre usando solo el tipo de la interfaz.
+
+**Ocultamiento:**  
+Las reglas numéricas las cuidan los constructores y los setters de `Arma`, `Agente` y `Equipo` (más el control del tope de `$16,000` en `ArmaService`). El constructor vacío que pide JPA carga valores legales por defecto y los setters validan cada dato antes de asignarlo, para que ni el JSON ni JPA puedan meter valores inválidos. En Insomnia, el pedido `06. POST /api/armas (Ilegal)` manda daño `-10` y munición `-5`, rebota con `400 Bad Request` y al listar con `03. GET /api/armas/todas` se ve que la base no se ensució.
+
+**PUT y PATCH:**  
+Usé `PUT /api/armas/{id}`, que reemplaza los campos editables del arma guardada. Si en el JSON del `PUT` se omite un número como `daño`, llega como `0` y el setter lanza error `400 Bad Request` porque viola el invariante de que el daño tiene que ser mayor a cero.
+
+**DELETE:**  
+En mi modelo, borrar con `DELETE /api/armas/{id}` significa sacar esa arma del inventario guardado en H2. Primero busca que el `id` exista (si no está devuelve `404 Not Found`) y después la elimina de la tabla.
+
+**Dos reglas:**  
+Los dos hechos que cambian el estado de más de un objeto son disparar/detonar validando munición y fuego amigo, y recibir el daño descontando chaleco Kevlar y vida en el agente. El endpoint de la simulación es `POST /api/armas/{id}/simular` (y también `GET /api/armas/granadas/simular`). Cuando corre, le resta 1 bala al `Arma` y le baja `chalecoKevlar` y `vida` al `Agente` en H2; si después hacés un `GET /api/armas/{id}`, se ve que la munición quedó descontada en la base.
+
+**Excepciones:**  
+La clase base se llama `ReglaDeJuegoException` y tiene dos hijas con el nombre de cada regla: `MunicionInsuficienteException` (cuando se intenta disparar con `0` balas o recargar mal, devuelve `409 Conflict`) y `FuegoAmigoException` (cuando se ataca a un compañero del mismo equipo con fuego amigo apagado, devuelve `422 Unprocessable Entity`). Un recurso que no existe (`NoSuchElementException` -> `404`) o un dato negativo al construir (`IllegalArgumentException` -> `400`) van por separado. El JSON de error muestra `error`, `tipoExcepcion`, `jerarquiaPadre`, `reglaViolada`, `mensaje` y `estado`. Usé excepciones no comprobadas (`RuntimeException`) para no ensuciar las firmas de los métodos con `throws` y para que Spring haga rollback automático si falla la transacción.
+
+**Preguntas de anclaje:**
+- *¿Si mañana cambiamos H2 por otra base, qué archivos tocan y cuáles se quedan quietos?* Solo se tocan el `pom.xml` (para el driver de la nueva base) y `application.properties` (para la URL, usuario y clave). Las clases de `domain`, `repository`, `service` y `controller` quedan intactas.
+- *¿Quién lanza la excepción, el controller o el objeto del juego?* La lanza el objeto del juego en el dominio (`Arma` y `GranadaHE`). El controller solo la atrapa con `@ExceptionHandler` y arma la respuesta HTTP.
 
 ---
 
-## 7. Diagrama de Clases Mermaid (Dominio, Interfaz, Repositorios, Controller y Excepciones)
+## Cómo importar y recorrer la colección de Insomnia
 
-El diagrama distingue explícitamente:
-- **Herencia (`<|--`)**: entre `Arma` y sus subclases (`Pistola`, `Rifle`, `Escopeta`, `SubfusilSMG`, `Francotirador`, `Granada`, `DesertEagle`, `Glock18`, `M4A4`, `MP9`, `Nova`, `GranadaHE`), y entre `Agente` y sus dos hijas (`AgenteCT`, `AgenteTerrorista`).
-- **Implementación de interfaz (`<|..`)**: tanto `Arma` como `Agente` implementan el protocolo de dominio `InspeccionableEnPartida`.
-- **Uso del repositorio y capas (`-->`)**: `ArmaController` usa `ArmaService`, que depende de las interfaces `ArmaRepository` y `AgenteRepository`.
-- **Jerarquía de excepciones (`<|--`)**: `ReglaDeJuegoException` es la clase base del dominio y `MunicionInsuficienteException` y `FuegoAmigoException` son sus dos clases hijas atendidas por `ArmaController`.
+El archivo está en `insomnia/insomnia-cs2-collection.json`.
+
+1. En Insomnia ir a **Import** y elegir el archivo `insomnia/insomnia-cs2-collection.json`.
+2. Elegir el entorno **Base Environment** (`base_url = http://localhost:8080`, `arma_id = 1`).
+3. Recorrer los pedidos en orden:
+   - `01. GET /` — Verifica que la aplicación responde.
+   - `02. POST /api/armas` — Crea una `DesertEagle` en H2 (`201 Created`) con `7` balas. Si devuelve otro `id`, cambiar `arma_id` en el entorno.
+   - `03. GET /api/armas/todas` — Muestra la lista de armas guardadas en H2.
+   - `04. GET /api/armas/{id}` — Trae el arma creada por su `id`.
+   - `05. PUT /api/armas/{id}` — Le actualiza el nombre, daño y precio en H2.
+   - `06. POST /api/armas (Ilegal)` — Manda daño `-10` y munición `-5`, da `400 Bad Request` y no guarda basura.
+   - `07. GET /api/armas/9999` — Busca un `id` inexistente y da `404 Not Found`.
+   - `08. GET /api/armas/protocolo` — Muestra el resultado de usar la interfaz `InspeccionableEnPartida` con armas y agentes.
+   - `09. POST /api/armas/{id}/simular` — Simula el combate contra un `Terrorista`, baja la munición de `7` a `6` y le descuenta vida y chaleco al agente. Volviendo a correr el `04. GET /api/armas/{id}` se ve que quedó con `6` balas en H2.
+   - `10. POST /api/armas/{id}/recargar?balas=0` — Provoca la excepción hija `MunicionInsuficienteException` (`409 Conflict`).
+   - `11. POST /api/armas/{id}/simular (Mismo Equipo)` — Provoca la excepción hija `FuegoAmigoException` (`422 Unprocessable Entity`).
+   - `12. DELETE /api/armas/{id}` — Borra el arma de H2 (un `GET` después da `404`).
+
+---
+
+## Diagrama de Clases Mermaid
+
+En el diagrama se distinguen la herencia (`<|--`), la implementación de la interfaz `InspeccionableEnPartida` (`<|..`), el uso de los repositorios (`-->`) y la jerarquía de excepciones (`<|--`):
 
 ```mermaid
 classDiagram

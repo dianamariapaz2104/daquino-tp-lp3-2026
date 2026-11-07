@@ -1,7 +1,7 @@
 # Bitácora de uso de IA
 
 **Asistente usado:** Antigravity (Google DeepMind)  
-**Modelos exactos:** Gemini 3.8 Flash (High) (Entrega POO-06, 07/10/2026) y Gemini 4 Argon (Medium) (POO-08: Persistencia JPA/H2, CRUD REST, Interfaz de Dominio, Simulación con 2 Reglas, Jerarquía de Excepciones y Colección Insomnia, 28/10/2026 - 06/11/2026)  
+**Modelos exactos:** Gemini 3.8 Flash (High) (Entrega POO-06) y Gemini 4 Argon (Medium) (Entrega POO-08)  
 **Autora:** Diana Aquino  
 
 ---
@@ -19,11 +19,11 @@ Para hacer este TP me apoyé en el asistente de IA para acelerar el código ruti
 
 ---
 
-## Etapa 2: Persistencia H2, CRUD REST, Interfaz, Reglas de Juego, Excepciones e Insomnia (POO-08)
+## Etapa 2: Persistencia H2, CRUD, Interfaz, Reglas de Juego, Excepciones e Insomnia (POO-08)
 
-1. Le consulté por qué no tenía disponibles las anotaciones de JPA y le pedí agregar las dependencias `spring-boot-starter-data-jpa` y `com.h2database:h2` en el `pom.xml`, configurando `application.properties` para persistir en `./data/armas` y habilitar la consola `/h2-console`.
-2. Le pedí implementar un CRUD REST completo para la jerarquía `Arma` respetando la arquitectura en capas (`ArmaController` -> `ArmaService` -> `ArmaRepository`) con discriminación polimórfica JSON (`@JsonTypeInfo` / `@JsonSubTypes`) y validaciones de negocio (tope de presupuesto de CS2 de `$16,000`, daño máximo permitido e invariantes del dominio).
-3. Le pedí agregar la segunda jerarquía persistida en H2 (`Agente` -> `AgenteCT` y `AgenteTerrorista`) con su propio repositorio JPA (`AgenteRepository`) y el objeto de valor `@Embeddable` `Equipo`.
-4. Le pedí definir la interfaz de dominio `InspeccionableEnPartida` (protocolo POO-07) e implementarla en dos familias distintas (`Arma` y `Agente`), exponiendo el endpoint `GET /api/armas/protocolo` que opera sobre `List<InspeccionableEnPartida>`.
-5. Le pedí programar las dos reglas de negocio de Counter-Strike 2 dentro de los métodos del dominio (`Arma.dispararContraAgente`, `Arma.cargarMunicionValidada`, `GranadaHE.detonarEnArea` y `Agente.recibirDañoExplosivo`) y exponer la simulación persistida (`POST /api/armas/{id}/simular` y `GET /api/armas/granadas/simular`) donde participan las tres clases (`Arma`, `Agente` y `Equipo`) y un `GET` posterior refleja el cambio de estado en H2.
-6. Le pedí crear la jerarquía de excepciones del dominio (`ReglaDeJuegoException` como base y dos hijas: `MunicionInsuficienteException` y `FuegoAmigoException`) con un `@ExceptionHandler` HTTP por tipo (`409 Conflict` y `422 Unprocessable Entity`), generar la colección de Insomnia en `insomnia/insomnia-cs2-collection.json` y actualizar el `README.md` con las propiedades de H2, las respuestas a «Qué hay que pensar» y el diagrama Mermaid completo.
+1. Le consulté por qué no tenía disponibles las anotaciones de JPA y le pedí agregar las dependencias de Spring Data JPA y H2 en el `pom.xml`, configurando `application.properties` para guardar en `./data/armas` y activar `/h2-console`.
+2. Le pedí armar un CRUD REST completo para `Arma` con su repositorio `ArmaRepository`, y agregar la segunda jerarquía `Agente` (`AgenteCT` y `AgenteTerrorista`) con `AgenteRepository` y la clase `Equipo`.
+3. Le pedí crear la interfaz `InspeccionableEnPartida` (como en POO-07) para que la implementen `Arma` y `Agente`, y exponerla en el endpoint `GET /api/armas/protocolo`.
+4. Le pedí programar las dos reglas del juego en los métodos de `Arma`, `GranadaHE` y `Agente` (control de munición, cargador, fuego amigo y descuento de chaleco Kevlar y vida) y conectarlas en la simulación persistida (`POST /api/armas/{id}/simular`).
+5. Le pedí armar la jerarquía de excepciones (`ReglaDeJuegoException` como padre y `MunicionInsuficienteException` y `FuegoAmigoException` como hijas) con su `@ExceptionHandler` por cada tipo en el controller.
+6. Por último le pedí armar el archivo de la colección de Insomnia en `insomnia/` y actualizar el `README.md` y las especificaciones con mis respuestas y el diagrama Mermaid completo.
