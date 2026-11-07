@@ -197,72 +197,120 @@ classDiagram
     <<abstract>>
     -int capacidadCargadorPistola
     -String modoDisparo
+    +Pistola()
+    +Pistola(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, int capacidadCargador, String modoDisparo, int municion)
+    +Pistola(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, int capacidadCargador, String modoDisparo, int municion, int capacidadCargadorBase)
+    +getCapacidadCargadorPistola() int
+    +getModoDisparo() String
   }
 
   class Rifle {
     <<abstract>>
     -String modoDisparo
     -float retroceso
+    +Rifle()
+    +Rifle(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, String modoDisparo, float retroceso, int municion)
+    +Rifle(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, String modoDisparo, float retroceso, int municion, int capacidadCargador)
     +dispararRafaga() void
     +apuntar() void
+    +getModoDisparo() String
+    +getRetroceso() float
   }
 
   class Escopeta {
     <<abstract>>
     -int perdigones
     -float dispersion
+    +Escopeta()
+    +Escopeta(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, int perdigones, float dispersion, int municion)
+    +Escopeta(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, int perdigones, float dispersion, int municion, int capacidadCargador)
+    +getPerdigones() int
+    +getDispersion() float
   }
 
   class SubfusilSMG {
     <<abstract>>
     -float cadenciaFuego
     -float movilidad
+    +SubfusilSMG()
+    +SubfusilSMG(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, float cadenciaFuego, float movilidad, int municion)
+    +SubfusilSMG(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, float cadenciaFuego, float movilidad, int municion, int capacidadCargador)
     +dispararEnMovimiento() void
+    +getCadenciaFuego() float
+    +getMovilidad() float
   }
 
   class Francotirador {
     <<abstract>>
     -float zoom
     -int penetracion
+    +Francotirador()
+    +Francotirador(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, float zoom, int penetracion, int municion)
+    +Francotirador(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, float zoom, int penetracion, int municion, int capacidadCargador)
     +apuntarConMira() void
     +contenerRespiracion() void
+    +getZoom() float
+    +getPenetracion() int
   }
 
   class Granada {
     <<abstract>>
     -float radioExplosion
     -float tiempoExplosion
+    +Granada()
+    +Granada(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, float radioExplosion, float tiempoExplosion, int municion)
+    +Granada(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, float radioExplosion, float tiempoExplosion, int municion, int capacidadCargador)
     +lanzar() void
     +rebotar() void
     +calcularDañoOndaExpansiva(double distanciaMetros, boolean tieneChaleco) int
+    +getRadioExplosion() float
+    +getTiempoExplosion() float
   }
 
   class DesertEagle {
+    +DesertEagle()
+    +DesertEagle(Equipo equipo)
+    +DesertEagle(int daño, int municion, Equipo equipo)
     +comportamientoDeCombate() String
     +disparar() String
   }
 
   class Glock18 {
+    +Glock18()
+    +Glock18(Equipo equipo)
+    +Glock18(int daño, int municion, Equipo equipo)
     +comportamientoDeCombate() String
     +disparar() String
   }
 
   class M4A4 {
+    +M4A4()
+    +M4A4(Equipo equipo)
+    +M4A4(int daño, int municion, Equipo equipo)
     +comportamientoDeCombate() String
     +disparar() String
   }
 
   class MP9 {
+    +MP9()
+    +MP9(Equipo equipo)
+    +MP9(int daño, int municion, Equipo equipo)
     +comportamientoDeCombate() String
     +disparar() String
   }
 
   class Nova {
+    +Nova()
+    +Nova(Equipo equipo)
+    +Nova(int daño, int municion, Equipo equipo)
     +comportamientoDeCombate() String
     +disparar() String
   }
 
   class GranadaHE {
+    +GranadaHE()
+    +GranadaHE(Equipo equipo)
+    +GranadaHE(int daño, int municion, Equipo equipo)
     +comportamientoDeCombate() String
     +disparar() String
     +detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo) String
@@ -291,18 +339,29 @@ classDiagram
 
   class AgenteCT {
     -boolean tieneKitDesactivacion
+    +AgenteCT()
+    +AgenteCT(String nombre, boolean tieneKitDesactivacion)
+    +AgenteCT(String nombre, int vida, int chalecoKevlar, int dinero, boolean tieneKitDesactivacion)
     +rolTactico() String
     +ejecutarAccionEspecial() String
+    +isTieneKitDesactivacion() boolean
+    +setTieneKitDesactivacion(boolean tieneKitDesactivacion) void
   }
 
   class AgenteTerrorista {
     -boolean portaBombaC4
+    +AgenteTerrorista()
+    +AgenteTerrorista(String nombre, boolean portaBombaC4)
+    +AgenteTerrorista(String nombre, int vida, int chalecoKevlar, int dinero, boolean portaBombaC4)
     +rolTactico() String
     +ejecutarAccionEspecial() String
+    +isPortaBombaC4() boolean
+    +setPortaBombaC4(boolean portaBombaC4) void
   }
 
   class ReglaDeJuegoException {
     -String reglaViolada
+    +ReglaDeJuegoException(String reglaViolada, String mensaje)
     +getReglaViolada() String
   }
 
@@ -310,11 +369,18 @@ classDiagram
     -String nombreArma
     -int municionActual
     -int capacidadCargador
+    +MunicionInsuficienteException(String nombreArma, int municionActual, int capacidadCargador, String mensaje)
+    +getNombreArma() String
+    +getMunicionActual() int
+    +getCapacidadCargador() int
   }
 
   class FuegoAmigoException {
     -String nombreEquipo
     -String accionBloqueada
+    +FuegoAmigoException(String nombreEquipo, String accionBloqueada, String mensaje)
+    +getNombreEquipo() String
+    +getAccionBloqueada() String
   }
 
   class ArmaRepository {
@@ -333,18 +399,28 @@ classDiagram
   class ArmaService {
     -ArmaRepository armaRepository
     -AgenteRepository agenteRepository
+    +ArmaService(ArmaRepository armaRepository, AgenteRepository agenteRepository)
     +crearArma(Arma arma) Arma
     +listarTodas() List~Arma~
     +obtenerPorId(Long id) Arma
     +actualizarArma(Long id, Arma datosActualizados) Arma
     +eliminarArma(Long id) void
+    +listarAgentes() List~Agente~
+    +obtenerAgentePorId(Long id) Agente
+    +validarReglasDeNegocio(Arma arma) void
     +simularCombateConArmaPersistida(Long armaId, String equipoObjetivoNombre, int distanciaMetros, boolean tiroALaCabeza, boolean tieneChalecoKevlar, boolean permitirFuegoAmigo) Map
     +recargarArmaPersistida(Long armaId, int balas) Map
+    +simularExplosionGranada(String equipoAtacanteNombre, String equipoObjetivoNombre, double distanciaMetros, boolean tieneChalecoKevlar, boolean permitirFuegoAmigo, int dañoBase) Map
     +obtenerElementosProtocolo() List~InspeccionableEnPartida~
+    +obtenerAgentesPolimorfismo() List~Agente~
+    +construirYGuardarArma(String nombre, Integer daño, Integer municion, String equipoNombre) Arma
+    +obtenerCatalogoPolimorfico() List~Arma~
+    +fabricarArma(String nombre, Integer daño, Integer municion, Equipo equipo) Arma
   }
 
   class ArmaController {
     -ArmaService armaService
+    +ArmaController(ArmaService armaService)
     +crearArma(Arma arma) ResponseEntity~Arma~
     +listarTodas() ResponseEntity~List~
     +obtenerPorId(Long id) ResponseEntity~Arma~
@@ -352,9 +428,20 @@ classDiagram
     +eliminarArma(Long id) ResponseEntity~Map~
     +consultarProtocoloInspeccionable() ResponseEntity~List~
     +simularCombatePost(Long id, String equipoObjetivo, int distancia, boolean headshot, boolean chaleco, boolean fuegoAmigo) ResponseEntity~Map~
+    +simularCombateGet(Long id, String equipoObjetivo, int distancia, boolean headshot, boolean chaleco, boolean fuegoAmigo) ResponseEntity~Map~
     +recargarArmaPersistida(Long id, int balas) ResponseEntity~Map~
+    +listarAgentesPersistidos() ResponseEntity~List~
+    +obtenerAgentePorId(Long id) ResponseEntity~Agente~
+    +construirArma(String nombre, Integer municion, Integer daño, String equipoNombre) Map
+    +demostrarPolimorfismo() List~Map~
+    +dispararArma(String nombre, Integer distancia, boolean headshot) Map
+    +simularExplosionGranada(String equipoAtacante, String equipoObjetivo, double distancia, boolean chaleco, boolean fuegoAmigo, int dañoBase) ResponseEntity~Map~
+    +demostrarPolimorfismoAgentes() List~Map~
     +manejarMunicionInsuficiente(MunicionInsuficienteException ex) ResponseEntity~Map~
     +manejarFuegoAmigo(FuegoAmigoException ex) ResponseEntity~Map~
+    +manejarReglaDeJuegoBase(ReglaDeJuegoException ex) ResponseEntity~Map~
+    +manejarReglaViolada(IllegalArgumentException ex) ResponseEntity~Map~
+    +manejarNoEncontrado(NoSuchElementException ex) ResponseEntity~Map~
   }
 
   InspeccionableEnPartida <|.. Arma
