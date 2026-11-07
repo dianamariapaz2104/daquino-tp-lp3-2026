@@ -1,5 +1,6 @@
 package py.edu.uc.lp3.service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import py.edu.uc.lp3.domain.DesertEagle;
 import py.edu.uc.lp3.domain.Equipo;
 import py.edu.uc.lp3.domain.Glock18;
 import py.edu.uc.lp3.domain.GranadaHE;
+import py.edu.uc.lp3.domain.InspeccionableEnPartida;
 import py.edu.uc.lp3.domain.M4A4;
 import py.edu.uc.lp3.domain.MP9;
 import py.edu.uc.lp3.domain.Nova;
@@ -97,6 +99,23 @@ public class ArmaService {
         armaRepository.delete(existente);
     }
 
+    /**
+     * READ Agentes persistidos en H2.
+     */
+    @Transactional(readOnly = true)
+    public List<Agente> listarAgentes() {
+        return agenteRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Agente obtenerAgentePorId(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("El ID del agente debe ser un número positivo.");
+        }
+        return agenteRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No se encontró el agente con ID: " + id));
+    }
+
     // ==========================================
     // Validaciones de la Capa de Negocio
     // ==========================================
@@ -147,13 +166,92 @@ public class ArmaService {
     }
 
     // ==========================================
-    // Regla de Negocio: Simulación de Explosivos / Granadas (3 clases del modelo)
+    // Simulación Persistida con 2 Reglas del Dominio y 3 Clases (Arma, Agente, Equipo)
     // ==========================================
+
+    /**
+     * Simula un enfrentamiento de combate sobre un Arma ya persistida en H2:
+     * Participan 3 clases del modelo: Arma (subclase concreta), Agente (AgenteCT o AgenteTerrorista) y Equipo.
+     * Dispara las 2 reglas de negocio dentro de los objetos del dominio:
+     *   1) Regla de munición y validación de fuego amigo entre Equipos (lanza FuegoAmigoException o MunicionInsuficienteException).
+     *   2) Regla de daño balístico con atenuación por distancia, headshot y absorción en chaleco Kevlar y vida del Agente.
+     * Persiste el nuevo estado del Arma (munición descontada) y del Agente (vida y Kevlar descontados) en H2.
+     */
+    public Map<String, Object> simularCombateConArmaPersistida(
+            Long armaId,
+            String equipoObjetivoNombre,
+            int distanciaMetros,
+            boolean tiroALaCabeza,
+            boolean tieneChalecoKevlar,
+            boolean permitirFuegoAmigo) {
+
+        Arma arma = obtenerPorId(armaId);
+        int municionAntes = arma.getMunicion();
+
+        Equipo equipoObjetivo = new Equipo(equipoObjetivoNombre);
+        Agente agenteObjetivo = crearAgentePorEquipo("Objetivo " + equipoObjetivo.getNombre(), equipoObjetivo, tieneChalecoKevlar);
+        int vidaAntes = agenteObjetivo.getVida();
+        int chalecoAntes = agenteObjetivo.getChalecoKevlar();
+
+        // El dominio ejecuta las dos reglas y lanza MunicionInsuficienteException o FuegoAmigoException si se violan
+        int dañoInfligido = arma.dispararContraAgente(agenteObjetivo, distanciaMetros, tiroALaCabeza, permitirFuegoAmigo);
+
+        // Persistir los cambios de estado en H2
+        Arma armaActualizada = armaRepository.save(arma);
+        Agente agentePersistido = agenteRepository.save(agenteObjetivo);
+
+        Map<String, Object> resultado = new LinkedHashMap<>();
+        resultado.put("idArmaPersistida", armaActualizada.getId());
+        resultado.put("arma", armaActualizada.getNombre());
+        resultado.put("tipoArma", armaActualizada.getTipoArma());
+        resultado.put("equipoArma", armaActualizada.getEquipo().getNombre());
+        resultado.put("municionAntes", municionAntes);
+        resultado.put("municionDespues", armaActualizada.getMunicion());
+        resultado.put("capacidadCargador", armaActualizada.getCapacidadCargador());
+        resultado.put("idAgenteObjetivoPersistido", agentePersistido.getId());
+        resultado.put("agenteObjetivo", agentePersistido.getNombre());
+        resultado.put("tipoAgenteObjetivo", agentePersistido.getTipoAgente());
+        resultado.put("equipoObjetivo", agentePersistido.getEquipo().getNombre());
+        resultado.put("distanciaMetros", distanciaMetros);
+        resultado.put("tiroALaCabeza", tiroALaCabeza);
+        resultado.put("dañoInfligido", dañoInfligido);
+        resultado.put("vidaObjetivoAntes", vidaAntes);
+        resultado.put("vidaObjetivoDespues", agentePersistido.getVida());
+        resultado.put("chalecoAntes", chalecoAntes);
+        resultado.put("chalecoDespues", agentePersistido.getChalecoKevlar());
+        resultado.put("objetivoSigueVivo", agentePersistido.estaVivo());
+        resultado.put("clasesParticipantes", List.of(
+                armaActualizada.getClass().getSimpleName() + " (jerarquía Arma)",
+                agentePersistido.getClass().getSimpleName() + " (jerarquía Agente)",
+                Equipo.class.getSimpleName()
+        ));
+        return resultado;
+    }
+
+    /**
+     * Ejecuta la regla de negocio de carga de munición sobre un Arma persistida en H2.
+     * Si el cargador ya está lleno o las balas <= 0, el dominio lanza MunicionInsuficienteException.
+     */
+    public Map<String, Object> recargarArmaPersistida(Long armaId, int balas) {
+        Arma arma = obtenerPorId(armaId);
+        int municionAntes = arma.getMunicion();
+        int balasCargadas = arma.cargarMunicionValidada(balas);
+        Arma actualizada = armaRepository.save(arma);
+
+        Map<String, Object> resultado = new LinkedHashMap<>();
+        resultado.put("idArmaPersistida", actualizada.getId());
+        resultado.put("arma", actualizada.getNombre());
+        resultado.put("municionAntes", municionAntes);
+        resultado.put("balasCargadas", balasCargadas);
+        resultado.put("municionDespues", actualizada.getMunicion());
+        resultado.put("capacidadCargador", actualizada.getCapacidadCargador());
+        return resultado;
+    }
 
     /**
      * Regla de Negocio conectada a REST donde participan 3 clases del modelo:
      * 1. GranadaHE (el explosivo concreto lanzado y persistido en H2)
-     * 2. Granada / Arma (cálculo de onda expansiva por radio de explosión y consumo de munición)
+     * 2. Agente (AgenteCT / AgenteTerrorista que recibe el impacto explosivo y se persiste en H2)
      * 3. Equipo (bando atacante vs bando objetivo para control de Fuego Amigo en CS2)
      */
     public Map<String, Object> simularExplosionGranada(
@@ -164,11 +262,9 @@ public class ArmaService {
             boolean permitirFuegoAmigo,
             int dañoBase) {
 
-        // 1. Instanciación y validación de los dos objetos Equipo (Clase 1: Equipo)
         Equipo equipoAtacante = new Equipo(equipoAtacanteNombre);
         Equipo equipoObjetivo = new Equipo(equipoObjetivoNombre);
 
-        // Regla de Negocio 1: Alcance físico de lanzamiento de granadas en CS2 (0m a 35m)
         if (distanciaMetros < 0) {
             throw new IllegalArgumentException(
                     "Regla de negocio CS2: La distancia al epicentro de la granada no puede ser negativa (" + distanciaMetros + "m).");
@@ -178,34 +274,29 @@ public class ArmaService {
                     "Regla de negocio CS2: La distancia (" + distanciaMetros + "m) supera el alcance físico máximo de lanzamiento de una granada (" + ALCANCE_MAXIMO_LANZAMIENTO_METROS + "m).");
         }
 
-        // Regla de Negocio 2: Control de Fuego Amigo (Friendly Fire) entre equipos en modo competitivo
-        boolean esFuegoAmigo = equipoAtacante.esMismoEquipo(equipoObjetivo);
-        if (esFuegoAmigo && !permitirFuegoAmigo) {
-            throw new IllegalArgumentException(
-                    "Regla de negocio CS2: Fuego amigo bloqueado en modo competitivo. El equipo '"
-                            + equipoAtacante.getNombre() + "' no puede lanzar una Granada HE contra un aliado de su mismo equipo.");
-        }
-
-        // 2. Instanciación polimórfica de la jerarquía Agente (Clase 2: Agente -> AgenteCT / AgenteTerrorista)
         Agente agenteAtacante = crearAgentePorEquipo("Atacante " + equipoAtacante.getNombre(), equipoAtacante, true);
         Agente agenteObjetivo = crearAgentePorEquipo("Objetivo " + equipoObjetivo.getNombre(), equipoObjetivo, tieneChalecoKevlar);
 
-        // 3. Creación y detonación de la GranadaHE (Clase 3: GranadaHE / Granada / Arma)
         GranadaHE granada = new GranadaHE(dañoBase, 1, equipoAtacante);
         validarReglasDeNegocio(granada);
 
+        boolean esFuegoAmigo = equipoAtacante.esMismoEquipo(equipoObjetivo);
         int dañoOndaExpansiva = granada.calcularDañoOndaExpansiva(distanciaMetros, agenteObjetivo.tieneChaleco());
         int dañoFinal = (esFuegoAmigo && dañoOndaExpansiva > 0)
                 ? (int) Math.round(dañoOndaExpansiva * 0.65)
                 : dañoOndaExpansiva;
 
-        String reporteDetonacion = granada.detonarEnArea(distanciaMetros, agenteObjetivo.tieneChaleco(), equipoObjetivo);
+        // El método del dominio GranadaHE.detonarEnArea valida fuego amigo y munición, lanzando FuegoAmigoException o MunicionInsuficienteException
+        String reporteDetonacion = granada.detonarEnArea(
+                distanciaMetros,
+                agenteObjetivo.tieneChaleco(),
+                equipoObjetivo,
+                permitirFuegoAmigo
+        );
 
-        // El Agente objetivo sufre el impacto explosivo (desgasta Kevlar y reduce su vida de 100 HP)
         int vidaInicial = agenteObjetivo.getVida();
         agenteObjetivo.recibirDañoExplosivo(dañoFinal);
 
-        // 4. Persistir el explosivo y los agentes en H2
         GranadaHE guardadaEnH2 = armaRepository.save(granada);
         agenteRepository.save(agenteAtacante);
         Agente objetivoGuardado = agenteRepository.save(agenteObjetivo);
@@ -237,6 +328,40 @@ public class ArmaService {
         resultado.put("municionRestante", guardadaEnH2.getMunicion() + "/" + guardadaEnH2.getCapacidadCargador());
         resultado.put("reporteSimulacion", reporteDetonacion);
         return resultado;
+    }
+
+    // ==========================================
+    // Protocolo de Dominio POO-07 (Interfaz InspeccionableEnPartida)
+    // ==========================================
+
+    /**
+     * Devuelve una lista polimórfica tipada con la interfaz InspeccionableEnPartida,
+     * combinando instancias de dos familias distintas (Arma y Agente), incluyendo
+     * los registros persistidos en H2.
+     */
+    @Transactional(readOnly = true)
+    public List<InspeccionableEnPartida> obtenerElementosProtocolo() {
+        List<InspeccionableEnPartida> elementos = new ArrayList<>();
+        elementos.addAll(armaRepository.findAll());
+        elementos.addAll(agenteRepository.findAll());
+        if (elementos.isEmpty()) {
+            elementos.add(new M4A4());
+            elementos.add(new DesertEagle());
+            elementos.add(new AgenteCT("Sargento SAS (CT)", true));
+            elementos.add(new AgenteTerrorista("Líder Phoenix (T)", true));
+        } else {
+            // Garantizar que siempre haya representantes de ambas familias (Arma y Agente)
+            boolean hayArma = elementos.stream().anyMatch(e -> e instanceof Arma);
+            boolean hayAgente = elementos.stream().anyMatch(e -> e instanceof Agente);
+            if (!hayArma) {
+                elementos.add(new M4A4());
+            }
+            if (!hayAgente) {
+                elementos.add(new AgenteCT("Sargento SAS (CT)", true));
+                elementos.add(new AgenteTerrorista("Líder Phoenix (T)", true));
+            }
+        }
+        return elementos;
     }
 
     public List<Agente> obtenerAgentesPolimorfismo() {

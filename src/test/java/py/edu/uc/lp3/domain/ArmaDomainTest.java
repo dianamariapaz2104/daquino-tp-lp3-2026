@@ -1,5 +1,7 @@
 package py.edu.uc.lp3.domain;
 
+import java.util.List;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -119,5 +121,46 @@ public class ArmaDomainTest {
         // Recargar más del máximo no supera el tope
         m4a4.recargar(100);
         assertEquals(30, m4a4.getMunicion());
+    }
+
+    @Test
+    @DisplayName("Interfaz de dominio InspeccionableEnPartida funciona polimórficamente en familias distintas (Arma y Agente)")
+    void interfazInspeccionableEnPartidaEnFamiliasDistintas() {
+        List<InspeccionableEnPartida> elementos = List.of(
+                new M4A4(),
+                new AgenteCT("Sargento SAS", true),
+                new AgenteTerrorista("Líder Phoenix", true)
+        );
+
+        assertTrue(elementos.get(0).inspeccionarEnPartida().contains("[Inspección de Arma]"));
+        assertEquals(3100, elementos.get(0).calcularValorEconomico());
+
+        assertTrue(elementos.get(1).inspeccionarEnPartida().contains("[Inspección de Agente]"));
+        assertEquals(1450, elementos.get(1).calcularValorEconomico());
+    }
+
+    @Test
+    @DisplayName("Jerarquía de excepciones del dominio: lanza MunicionInsuficienteException y FuegoAmigoException")
+    void jerarquiaExcepcionesDominio() {
+        M4A4 armaSinBalas = new M4A4(30, 0, new Equipo("Counter-Terrorista"));
+        AgenteTerrorista enemigo = new AgenteTerrorista("Phoenix", true);
+        AgenteCT aliado = new AgenteCT("SAS", true);
+
+        // Hija 1: MunicionInsuficienteException al disparar sin balas
+        MunicionInsuficienteException exMunicion = assertThrows(
+                MunicionInsuficienteException.class,
+                () -> armaSinBalas.dispararContraAgente(enemigo, 15, false, false)
+        );
+        assertTrue(exMunicion instanceof ReglaDeJuegoException);
+        assertEquals(0, exMunicion.getMunicionActual());
+
+        // Hija 2: FuegoAmigoException al atacar aliado con fuego amigo deshabilitado
+        M4A4 armaConBalas = new M4A4(30, 10, new Equipo("Counter-Terrorista"));
+        FuegoAmigoException exFuegoAmigo = assertThrows(
+                FuegoAmigoException.class,
+                () -> armaConBalas.dispararContraAgente(aliado, 15, false, false)
+        );
+        assertTrue(exFuegoAmigo instanceof ReglaDeJuegoException);
+        assertEquals("Counter-Terrorista", exFuegoAmigo.getNombreEquipo());
     }
 }

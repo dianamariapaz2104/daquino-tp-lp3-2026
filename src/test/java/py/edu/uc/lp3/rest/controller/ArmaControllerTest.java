@@ -83,6 +83,17 @@ public class ArmaControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/armas/protocolo expone la interfaz InspeccionableEnPartida en familias distintas (Arma y Agente)")
+    void getProtocoloInterfazEnFamiliasDistintas() throws Exception {
+        mockMvc.perform(get("/api/armas/protocolo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(2))))
+                .andExpect(jsonPath("$[0].protocoloInterfaz").value("InspeccionableEnPartida"))
+                .andExpect(jsonPath("$[0].inspeccionEnPartida").isNotEmpty())
+                .andExpect(jsonPath("$[*].familiaJerarquia", hasItems("Arma", "Agente")));
+    }
+
+    @Test
     @DisplayName("GET /api/armas/disparar demuestra sobrecarga sin distancia y con distancia/headshot")
     void getArmasDispararSobrecarga() throws Exception {
         // Disparo sin distancia
@@ -176,6 +187,75 @@ public class ArmaControllerTest {
     }
 
     @Test
+    @DisplayName("Simulación persistida sobre Arma en H2 y verificación de ambas excepciones hijas del dominio")
+    void simulacionPersistidaYHandlersExcepcionesHijas() throws Exception {
+        // Crear un arma con 1 sola bala en el cargador (1/7)
+        String deagleUnaBalaJson = """
+                {
+                  "tipoArma": "DesertEagle",
+                  "nombre": "Desert Eagle Kumicho Dragon",
+                  "daño": 45,
+                  "precision": 0.80,
+                  "tiempoRecarga": 2.0,
+                  "precio": 700,
+                  "municion": 1,
+                  "capacidadCargador": 7,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+
+        MvcResult postResult = mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(deagleUnaBalaJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Number idNumber = JsonPath.read(postResult.getResponse().getContentAsString(), "$.id");
+        long id = idNumber.longValue();
+
+        // 1. Simulación caso feliz: dispara contra Terrorista, descuenta munición de 1 a 0 y reduce vida/Kevlar del Agente en H2
+        mockMvc.perform(post("/api/armas/" + id + "/simular")
+                        .param("equipoObjetivo", "Terrorista")
+                        .param("distancia", "15")
+                        .param("headshot", "true")
+                        .param("chaleco", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.municionAntes").value(1))
+                .andExpect(jsonPath("$.municionDespues").value(0))
+                .andExpect(jsonPath("$.dañoInfligido", greaterThan(0)))
+                .andExpect(jsonPath("$.vidaObjetivoDespues", lessThan(100)));
+
+        // 2. Un GET posterior confirma que la munición 0 quedó persistida en H2
+        mockMvc.perform(get("/api/armas/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.municion").value(0));
+
+        // 3. Excepción Hija 1 (MunicionInsuficienteException -> 409 Conflict): intentar disparar con munición 0
+        mockMvc.perform(post("/api/armas/" + id + "/simular")
+                        .param("equipoObjetivo", "Terrorista")
+                        .param("distancia", "15"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.tipoExcepcion").value("MunicionInsuficienteException"))
+                .andExpect(jsonPath("$.jerarquiaPadre").value("ReglaDeJuegoException"))
+                .andExpect(jsonPath("$.estado").value(409));
+
+        // 4. Recargar el arma en H2
+        mockMvc.perform(post("/api/armas/" + id + "/recargar").param("balas", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.municionDespues").value(5));
+
+        // 5. Excepción Hija 2 (FuegoAmigoException -> 422 Unprocessable Entity): atacar al mismo equipo con fuegoAmigo=false
+        mockMvc.perform(post("/api/armas/" + id + "/simular")
+                        .param("equipoObjetivo", "Counter-Terrorista")
+                        .param("distancia", "10")
+                        .param("fuegoAmigo", "false"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.tipoExcepcion").value("FuegoAmigoException"))
+                .andExpect(jsonPath("$.jerarquiaPadre").value("ReglaDeJuegoException"))
+                .andExpect(jsonPath("$.estado").value(422));
+    }
+
+    @Test
     @DisplayName("Validación de negocio en Service: rechaza arma que supera el presupuesto máximo de CS2 ($16,000)")
     void validacionNegocioServiceRechazaPrecioExcesivo() throws Exception {
         String armaInvalidaJson = """
@@ -199,7 +279,7 @@ public class ArmaControllerTest {
     }
 
     @Test
-    @DisplayName("Regla de negocio en granadas: simula explosión con 3 clases del modelo (Equipo, Granada, GranadaHE)")
+    @DisplayName("Regla de negocio en granadas: simula explosión con 3 clases del modelo (Equipo, Agente, GranadaHE)")
     void simulacionExplosionGranadaConTresClases() throws Exception {
         // Caso 1: Detonación válida contra equipo rival dentro del radio de 5m
         mockMvc.perform(get("/api/armas/granadas/simular")
@@ -214,14 +294,14 @@ public class ArmaControllerTest {
                 .andExpect(jsonPath("$.dañoFinalCalculado", greaterThan(0)))
                 .andExpect(jsonPath("$.municionRestante").value("0/1"));
 
-        // Caso 2: Rechazo por regla de negocio de Fuego Amigo (mismo equipo en modo competitivo)
+        // Caso 2: Rechazo por regla de negocio de Fuego Amigo (FuegoAmigoException -> 422 Unprocessable Entity)
         mockMvc.perform(get("/api/armas/granadas/simular")
                         .param("equipoAtacante", "Counter-Terrorista")
                         .param("equipoObjetivo", "Counter-Terrorista")
                         .param("distancia", "1.5")
                         .param("fuegoAmigo", "false"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Regla de dominio violada"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.tipoExcepcion").value("FuegoAmigoException"))
                 .andExpect(jsonPath("$.mensaje", containsString("Fuego amigo bloqueado")));
     }
 }
