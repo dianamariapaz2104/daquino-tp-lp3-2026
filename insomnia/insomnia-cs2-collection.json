@@ -1,0 +1,255 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-10-29T12:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_cs2_poo08",
+      "parentId": null,
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "name": "Counter-Strike 2 - TP POO-08 (CRUD H2, Reglas, Interfaz y Excepciones)",
+      "description": "Colección de pruebas REST para el TP POO-08 de Lenguaje de Programación 3 (Diana Aquino).",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_cs2_base",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "arma_id": 1
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "arma_id"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 1730203200000,
+      "_type": "environment"
+    },
+    {
+      "_id": "req_01_index",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/",
+      "name": "01. GET / - Confirmar servicio vivo",
+      "description": "Verifica que la aplicación Spring Boot está viva y devuelve el catálogo de endpoints.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "_type": "request"
+    },
+    {
+      "_id": "req_02_post_crear_valido",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas",
+      "name": "02. POST /api/armas - Crear Arma válida en H2 (201 Created)",
+      "description": "Crea una Desert Eagle en H2 discriminando el subtipo con 'tipoArma' y devuelve 201 Created con su id asignado.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipoArma\": \"DesertEagle\",\n  \"nombre\": \"Desert Eagle Blaze\",\n  \"daño\": 45,\n  \"precision\": 0.80,\n  \"tiempoRecarga\": 2.0,\n  \"precio\": 700,\n  \"municion\": 7,\n  \"capacidadCargador\": 7,\n  \"equipo\": {\n    \"nombre\": \"Counter-Terrorista\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "_type": "request"
+    },
+    {
+      "_id": "req_03_get_coleccion",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/todas",
+      "name": "03. GET /api/armas/todas - Listar colección persistida en H2",
+      "description": "Lista todas las armas guardadas en la base de datos H2.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "_type": "request"
+    },
+    {
+      "_id": "req_04_get_por_id",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}",
+      "name": "04. GET /api/armas/{id} - Leer Arma por ID (200 OK)",
+      "description": "Obtiene el arma por su identificador persistido en H2.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "_type": "request"
+    },
+    {
+      "_id": "req_05_put_actualizar",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}",
+      "name": "05. PUT /api/armas/{id} - Actualizar Arma en H2 (200 OK)",
+      "description": "Actualiza los atributos del arma existente en H2 validando invariantes y reglas de negocio.",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipoArma\": \"DesertEagle\",\n  \"nombre\": \"Desert Eagle Printstream\",\n  \"daño\": 50,\n  \"precision\": 0.85,\n  \"tiempoRecarga\": 1.9,\n  \"precio\": 750,\n  \"municion\": 7,\n  \"capacidadCargador\": 7,\n  \"equipo\": {\n    \"nombre\": \"Counter-Terrorista\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 5,
+      "_type": "request"
+    },
+    {
+      "_id": "req_06_post_ilegal",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas",
+      "name": "06. POST /api/armas (Ilegal) - Viola invariante de construcción (400 Bad Request)",
+      "description": "Intenta crear un arma con munición negativa (-5) y daño inválido; el dominio lo rechaza con 400 Bad Request sin ensuciar H2.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tipoArma\": \"M4A4\",\n  \"nombre\": \"M4A4 Ilegal\",\n  \"daño\": -10,\n  \"precision\": 0.85,\n  \"tiempoRecarga\": 2.0,\n  \"precio\": 3100,\n  \"municion\": -5,\n  \"capacidadCargador\": 30,\n  \"equipo\": {\n    \"nombre\": \"Counter-Terrorista\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 6,
+      "_type": "request"
+    },
+    {
+      "_id": "req_07_get_id_inexistente",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/9999",
+      "name": "07. GET /api/armas/9999 - ID inexistente (404 Not Found)",
+      "description": "Consulta un ID que no existe en H2 y recibe 404 Not Found.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 7,
+      "_type": "request"
+    },
+    {
+      "_id": "req_08_protocolo_interfaz",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/protocolo",
+      "name": "08. GET /api/armas/protocolo - Endpoint de la Interfaz InspeccionableEnPartida (POO-07)",
+      "description": "Usa polimórficamente la interfaz de dominio InspeccionableEnPartida sobre instancias de dos familias distintas (Arma y Agente).",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 8,
+      "_type": "request"
+    },
+    {
+      "_id": "req_09_simulacion_combate_feliz",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}/simular?equipoObjetivo=Terrorista&distancia=15&headshot=true&chaleco=true&fuegoAmigo=false",
+      "name": "09. POST /api/armas/{id}/simular - Simulación persistida (Caso Feliz con 2 reglas y 3 clases)",
+      "description": "Ejecuta la simulación con Arma, Agente y Equipo: descuenta 1 proyectil del Arma en H2 y reduce vida/Kevlar del Agente en H2. Un GET posterior a /api/armas/{id} muestra la munición descontada.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 9,
+      "_type": "request"
+    },
+    {
+      "_id": "req_10_excepcion_hija_1_municion",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}/recargar?balas=0",
+      "name": "10. POST /api/armas/{id}/recargar?balas=0 - Excepción Hija 1: MunicionInsuficienteException (409 Conflict)",
+      "description": "Provoca la primera excepción hija del dominio (MunicionInsuficienteException) al intentar una carga de munición inválida o disparar sin balas; el handler responde 409 Conflict.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 10,
+      "_type": "request"
+    },
+    {
+      "_id": "req_11_excepcion_hija_2_fuego_amigo",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}/simular?equipoObjetivo=Counter-Terrorista&distancia=10&fuegoAmigo=false",
+      "name": "11. POST /api/armas/{id}/simular (Mismo Equipo) - Excepción Hija 2: FuegoAmigoException (422 Unprocessable Entity)",
+      "description": "Provoca la segunda excepción hija del dominio (FuegoAmigoException) al atacar a un Agente aliado del mismo Equipo con fuego amigo desactivado; el handler responde 422 Unprocessable Entity.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 11,
+      "_type": "request"
+    },
+    {
+      "_id": "req_12_delete_arma",
+      "parentId": "wrk_cs2_poo08",
+      "modified": 1730203200000,
+      "created": 1730203200000,
+      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}",
+      "name": "12. DELETE /api/armas/{id} - Eliminar Arma de H2",
+      "description": "Elimina el arma de la base de datos H2. Un GET posterior a /api/armas/{id} devuelve 404 Not Found.",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 12,
+      "_type": "request"
+    }
+  ]
+}
