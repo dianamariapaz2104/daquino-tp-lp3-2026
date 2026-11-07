@@ -31,7 +31,7 @@ import jakarta.persistence.Table;
         @JsonSubTypes.Type(value = Nova.class, name = "Nova"),
         @JsonSubTypes.Type(value = GranadaHE.class, name = "GranadaHE")
 })
-public abstract class Arma {
+public abstract class Arma implements InspeccionableEnPartida {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,7 +50,8 @@ public abstract class Arma {
     private int capacidadCargador;
 
     /**
-     * Constructor simple: deja el objeto en un estado legal por defecto.
+     * Constructor simple requerido por JPA y de negocio por defecto:
+     * deja el objeto en un estado legal garantizado.
      */
     public Arma() {
         this("Arma Genérica", 20, 0.70f, 2.0f, 1000, new Equipo("Counter-Terrorista"), 20, 20);
@@ -120,6 +121,20 @@ public abstract class Arma {
     public abstract String disparar();
 
     // ==========================================
+    // Implementación del Protocolo InspeccionableEnPartida (POO-07)
+    // ==========================================
+
+    @Override
+    public String inspeccionarEnPartida() {
+        return "[Inspección de Arma] " + obtenerInfo() + " | Rol: " + comportamientoDeCombate();
+    }
+
+    @Override
+    public int calcularValorEconomico() {
+        return this.precio;
+    }
+
+    // ==========================================
     // Sobrecarga de Métodos del Dominio
     // ==========================================
 
@@ -155,6 +170,85 @@ public abstract class Arma {
             return "[" + nombre + "] Disparo a " + distanciaMetros + "m causando "
                     + dañoCalculado + " de daño efectivo. Balas restantes: " + municion + "/" + capacidadCargador + ".";
         }
+    }
+
+    // ==========================================
+    // Reglas de Negocio del Juego en el Dominio (POO-08)
+    // ==========================================
+
+    /**
+     * Regla de Negocio 1 y 2 en el dominio:
+     * Ejecuta un disparo de combate desde esta Arma contra un Agente objetivo validando:
+     * - Control de Fuego Amigo entre el Equipo del arma y el Equipo del Agente (lanza FuegoAmigoException).
+     * - Disponibilidad de proyectiles en el cargador (lanza MunicionInsuficienteException).
+     * - Cálculo balístico por distancia, headshot y absorción en chaleco Kevlar y vida del Agente.
+     */
+    public int dispararContraAgente(Agente objetivo, int distanciaMetros, boolean tiroALaCabeza, boolean permitirFuegoAmigo) {
+        if (objetivo == null) {
+            throw new IllegalArgumentException("El agente objetivo no puede ser nulo.");
+        }
+        if (distanciaMetros < 0) {
+            throw new IllegalArgumentException("La distancia de combate no puede ser negativa: " + distanciaMetros);
+        }
+        if (this.equipo != null && this.equipo.esMismoEquipo(objetivo.getEquipo()) && !permitirFuegoAmigo) {
+            throw new FuegoAmigoException(
+                    this.equipo.getNombre(),
+                    "Disparo con " + this.nombre + " contra aliado " + objetivo.getNombre(),
+                    "Regla de negocio CS2: Fuego amigo bloqueado en modo competitivo. El equipo '"
+                            + this.equipo.getNombre() + "' no puede atacar a un compañero de su mismo bando."
+            );
+        }
+        if (!puedeDisparar()) {
+            throw new MunicionInsuficienteException(
+                    this.nombre,
+                    this.municion,
+                    this.capacidadCargador,
+                    "Regla de negocio CS2: El arma '" + this.nombre
+                            + "' tiene el cargador vacío (0/" + this.capacidadCargador + "). Debe recargar antes de combatir."
+            );
+        }
+
+        gastarMunicion();
+
+        double factorAtenuacion = Math.max(0.15, 1.0 - (distanciaMetros * (1.0 - precision) / 100.0));
+        int dañoCalculado = (int) Math.round(daño * factorAtenuacion);
+        if (tiroALaCabeza) {
+            dañoCalculado *= 4;
+        }
+        if (this.equipo != null && this.equipo.esMismoEquipo(objetivo.getEquipo())) {
+            dañoCalculado = (int) Math.round(dañoCalculado * 0.65);
+        }
+
+        objetivo.recibirDañoExplosivo(dañoCalculado);
+        return dañoCalculado;
+    }
+
+    /**
+     * Regla de Negocio de Carga de Munición:
+     * Valida que la cantidad solicitada sea positiva y que el cargador no esté ya lleno,
+     * lanzando MunicionInsuficienteException si la operación de recarga es inválida.
+     */
+    public int cargarMunicionValidada(int balas) {
+        if (balas <= 0) {
+            throw new MunicionInsuficienteException(
+                    this.nombre,
+                    this.municion,
+                    this.capacidadCargador,
+                    "Regla de negocio CS2: La cantidad de proyectiles a cargar debe ser mayor a cero (recibido: " + balas + ")."
+            );
+        }
+        if (this.municion >= this.capacidadCargador) {
+            throw new MunicionInsuficienteException(
+                    this.nombre,
+                    this.municion,
+                    this.capacidadCargador,
+                    "Regla de negocio CS2: El cargador de '" + this.nombre + "' ya está al máximo de su capacidad ("
+                            + this.municion + "/" + this.capacidadCargador + ")."
+            );
+        }
+        int municionAnterior = this.municion;
+        this.municion = Math.min(this.capacidadCargador, this.municion + balas);
+        return this.municion - municionAnterior;
     }
 
     // ==========================================

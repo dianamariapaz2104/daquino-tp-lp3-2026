@@ -58,14 +58,36 @@ public class GranadaHE extends Granada {
 
     /**
      * Simula la detonación táctica de la Granada HE interactuando con Granada, Arma y Equipo.
+     * Lanza las excepciones hijas del dominio cuando se incumple la regla de munición o fuego amigo.
      */
     public String detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo) {
+        return detonarEnArea(distanciaMetros, tieneChaleco, equipoObjetivo, true);
+    }
+
+    /**
+     * Sobrecarga con validación explícita de Fuego Amigo en el dominio.
+     */
+    public String detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo, boolean permitirFuegoAmigo) {
         if (!puedeDisparar()) {
-            throw new IllegalArgumentException("La Granada HE ya fue detonada (munición 0/1).");
+            throw new MunicionInsuficienteException(
+                    getNombre(),
+                    getMunicion(),
+                    getCapacidadCargador(),
+                    "La Granada HE ya fue detonada (munición 0/" + getCapacidadCargador() + ")."
+            );
+        }
+
+        boolean fuegoAmigo = getEquipo().esMismoEquipo(equipoObjetivo);
+        if (fuegoAmigo && !permitirFuegoAmigo) {
+            throw new FuegoAmigoException(
+                    getEquipo().getNombre(),
+                    "Lanzamiento de Granada HE contra aliado",
+                    "Regla de negocio CS2: Fuego amigo bloqueado en modo competitivo. El equipo '"
+                            + getEquipo().getNombre() + "' no puede lanzar una Granada HE contra un aliado de su mismo equipo."
+            );
         }
 
         int dañoEfectivo = calcularDañoOndaExpansiva(distanciaMetros, tieneChaleco);
-        boolean fuegoAmigo = getEquipo().esMismoEquipo(equipoObjetivo);
         if (fuegoAmigo && dañoEfectivo > 0) {
             // En CS2 el fuego amigo reduce el daño infligido a compañeros de equipo
             dañoEfectivo = (int) Math.round(dañoEfectivo * 0.65);
