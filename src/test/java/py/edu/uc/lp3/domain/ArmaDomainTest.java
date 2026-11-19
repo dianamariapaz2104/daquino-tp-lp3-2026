@@ -4,10 +4,18 @@ import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import py.edu.uc.lp3.service.ArmaService;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 public class ArmaDomainTest {
+
+    @Autowired
+    private ArmaService armaService;
 
     @Test
     @DisplayName("Constructor simple de M4A4 y MP9 inicializa con estado legal por defecto")
@@ -43,24 +51,25 @@ public class ArmaDomainTest {
     }
 
     @Test
-    @DisplayName("Invariantes del dominio: rechaza valores negativos o ilegales con IllegalArgumentException")
-    void invariantesProtegidosRechazanValoresIlegales() {
+    @DisplayName("Validación de invariantes en ArmaService: rechaza valores negativos, munición > cargador y radioExplosion <= 0")
+    void serviceValidaInvariantesYRechazaValoresIlegales() {
         Equipo ct = new Equipo("Counter-Terrorista");
 
         // Daño <= 0
-        assertThrows(IllegalArgumentException.class, () -> new M4A4(0, 30, ct));
-        assertThrows(IllegalArgumentException.class, () -> new M4A4(-10, 30, ct));
+        assertThrows(IllegalArgumentException.class, () -> armaService.validarReglasDeNegocio(new M4A4(0, 30, ct)));
+        assertThrows(IllegalArgumentException.class, () -> armaService.validarReglasDeNegocio(new M4A4(-10, 30, ct)));
 
         // Munición negativa
-        assertThrows(IllegalArgumentException.class, () -> new M4A4(30, -5, ct));
-        assertThrows(IllegalArgumentException.class, () -> new MP9(24, -1, ct));
+        assertThrows(IllegalArgumentException.class, () -> armaService.validarReglasDeNegocio(new M4A4(30, -5, ct)));
+        assertThrows(IllegalArgumentException.class, () -> armaService.validarReglasDeNegocio(new MP9(24, -1, ct)));
 
         // Munición mayor a la capacidad del cargador
-        assertThrows(IllegalArgumentException.class, () -> new M4A4(30, 50, ct));
+        assertThrows(IllegalArgumentException.class, () -> armaService.validarReglasDeNegocio(new M4A4(30, 50, ct)));
 
-        // Distancia negativa en sobrecarga de disparar
-        M4A4 m4a4 = new M4A4();
-        assertThrows(IllegalArgumentException.class, () -> m4a4.disparar(-10));
+        // Radio de explosión negativo o cero en GranadaHE
+        GranadaHE granadaIlegal = new GranadaHE(ct);
+        granadaIlegal.aplicarParametrosExplosivoValidados(-3.0f, 1.5f);
+        assertThrows(IllegalArgumentException.class, () -> armaService.validarReglasDeNegocio(granadaIlegal));
     }
 
     @Test
@@ -69,7 +78,6 @@ public class ArmaDomainTest {
         Arma arma1 = new M4A4();
         Arma arma2 = new MP9();
 
-        // Polimorfismo a través del tipo base Arma
         String combate1 = arma1.comportamientoDeCombate();
         String combate2 = arma2.comportamientoDeCombate();
 
@@ -93,17 +101,14 @@ public class ArmaDomainTest {
     void sobrecargaMensajeDisparar() {
         M4A4 m4a4 = new M4A4();
 
-        // Sobrecarga 1: disparar()
         String dispBase = m4a4.disparar();
         assertTrue(dispBase.contains("calibre 5.56x45mm"));
         assertEquals(29, m4a4.getMunicion());
 
-        // Sobrecarga 2: disparar(int distancia)
         String dispDistancia = m4a4.disparar(20);
         assertTrue(dispDistancia.contains("Disparo a 20m"));
         assertEquals(28, m4a4.getMunicion());
 
-        // Sobrecarga 3: disparar(int distancia, boolean headshot)
         String dispCritico = m4a4.disparar(20, true);
         assertTrue(dispCritico.contains("HEADSHOT"));
         assertEquals(27, m4a4.getMunicion());
@@ -118,7 +123,6 @@ public class ArmaDomainTest {
         m4a4.recargar(10);
         assertEquals(15, m4a4.getMunicion());
 
-        // Recargar más del máximo no supera el tope
         m4a4.recargar(100);
         assertEquals(30, m4a4.getMunicion());
     }
@@ -140,25 +144,25 @@ public class ArmaDomainTest {
     }
 
     @Test
-    @DisplayName("Jerarquía de excepciones del dominio: lanza MunicionInsuficienteException y FuegoAmigoException")
-    void jerarquiaExcepcionesDominio() {
-        M4A4 armaSinBalas = new M4A4(30, 0, new Equipo("Counter-Terrorista"));
-        AgenteTerrorista enemigo = new AgenteTerrorista("Phoenix", true);
-        AgenteCT aliado = new AgenteCT("SAS", true);
+    @DisplayName("Jerarquía de excepciones lanzada desde ArmaService sobre entidades guardadas en H2")
+    void jerarquiaExcepcionesDesdeService() {
+        Arma armaSinBalas = armaService.crearArma(new M4A4(30, 0, new Equipo("Counter-Terrorista")));
+        Agente enemigo = armaService.crearAgente(new AgenteTerrorista("Phoenix", true));
+        Agente aliado = armaService.crearAgente(new AgenteCT("SAS", true));
 
-        // Hija 1: MunicionInsuficienteException al disparar sin balas
+        // Hija 1: MunicionInsuficienteException lanzada por ArmaService al disparar sin balas
         MunicionInsuficienteException exMunicion = assertThrows(
                 MunicionInsuficienteException.class,
-                () -> armaSinBalas.dispararContraAgente(enemigo, 15, false, false)
+                () -> armaService.simularCombateConEntidadesPersistidas(armaSinBalas.getId(), enemigo.getId(), null, 15, false)
         );
         assertTrue(exMunicion instanceof ReglaDeJuegoException);
         assertEquals(0, exMunicion.getMunicionActual());
 
-        // Hija 2: FuegoAmigoException al atacar aliado con fuego amigo deshabilitado
-        M4A4 armaConBalas = new M4A4(30, 10, new Equipo("Counter-Terrorista"));
+        // Hija 2: FuegoAmigoException lanzada por ArmaService al atacar a un Agente del mismo Equipo guardado en H2
+        Arma armaConBalas = armaService.crearArma(new M4A4(30, 10, new Equipo("Counter-Terrorista")));
         FuegoAmigoException exFuegoAmigo = assertThrows(
                 FuegoAmigoException.class,
-                () -> armaConBalas.dispararContraAgente(aliado, 15, false, false)
+                () -> armaService.simularCombateConEntidadesPersistidas(armaConBalas.getId(), aliado.getId(), null, 15, false)
         );
         assertTrue(exFuegoAmigo instanceof ReglaDeJuegoException);
         assertEquals("Counter-Terrorista", exFuegoAmigo.getNombreEquipo());

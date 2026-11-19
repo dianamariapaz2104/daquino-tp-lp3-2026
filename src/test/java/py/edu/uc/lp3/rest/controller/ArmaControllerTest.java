@@ -96,13 +96,11 @@ public class ArmaControllerTest {
     @Test
     @DisplayName("GET /api/armas/disparar demuestra sobrecarga sin distancia y con distancia/headshot")
     void getArmasDispararSobrecarga() throws Exception {
-        // Disparo sin distancia
         mockMvc.perform(get("/api/armas/disparar").param("nombre", "M4A4"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.metodoSobrecargado").value("disparar() [sin argumentos]"))
                 .andExpect(jsonPath("$.resultado").value(containsString("[M4A4]")));
 
-        // Disparo con distancia y headshot
         mockMvc.perform(get("/api/armas/disparar")
                         .param("nombre", "M4A4")
                         .param("distancia", "30")
@@ -187,9 +185,47 @@ public class ArmaControllerTest {
     }
 
     @Test
-    @DisplayName("Simulación persistida sobre Arma en H2 y verificación de ambas excepciones hijas del dominio")
-    void simulacionPersistidaYHandlersExcepcionesHijas() throws Exception {
-        // Crear un arma con 1 sola bala en el cargador (1/7)
+    @DisplayName("Simulación persistida usando Arma y Agente creados con CRUD en H2 y verificación de excepciones hijas")
+    void simulacionPersistidaConAgentesDeH2YHandlersExcepcionesHijas() throws Exception {
+        // 1. Crear un AgenteTerrorista objetivo en H2 mediante POST /api/agentes
+        String terroristaJson = """
+                {
+                  "tipoAgente": "AgenteTerrorista",
+                  "nombre": "Phoenix Objetivo H2",
+                  "vida": 100,
+                  "chalecoKevlar": 100,
+                  "dinero": 800,
+                  "portaBombaC4": true,
+                  "equipo": { "nombre": "Terrorista" }
+                }
+                """;
+        MvcResult postTerrorista = mockMvc.perform(post("/api/agentes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(terroristaJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long terroristaId = ((Number) JsonPath.read(postTerrorista.getResponse().getContentAsString(), "$.id")).longValue();
+
+        // 2. Crear un AgenteCT aliado en H2 mediante POST /api/agentes
+        String aliadoCtJson = """
+                {
+                  "tipoAgente": "AgenteCT",
+                  "nombre": "SAS Aliado H2",
+                  "vida": 100,
+                  "chalecoKevlar": 100,
+                  "dinero": 800,
+                  "tieneKitDesactivacion": true,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+        MvcResult postAliado = mockMvc.perform(post("/api/agentes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(aliadoCtJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long aliadoCtId = ((Number) JsonPath.read(postAliado.getResponse().getContentAsString(), "$.id")).longValue();
+
+        // 3. Crear un Arma en H2 con 1 sola bala en el cargador (1/7)
         String deagleUnaBalaJson = """
                 {
                   "tipoArma": "DesertEagle",
@@ -209,50 +245,79 @@ public class ArmaControllerTest {
                         .content(deagleUnaBalaJson))
                 .andExpect(status().isCreated())
                 .andReturn();
+        long armaId = ((Number) JsonPath.read(postResult.getResponse().getContentAsString(), "$.id")).longValue();
 
-        Number idNumber = JsonPath.read(postResult.getResponse().getContentAsString(), "$.id");
-        long id = idNumber.longValue();
-
-        // 1. Simulación caso feliz: dispara contra Terrorista, descuenta munición de 1 a 0 y reduce vida/Kevlar del Agente en H2
-        mockMvc.perform(post("/api/armas/" + id + "/simular")
-                        .param("equipoObjetivo", "Terrorista")
+        // 4. Simulación caso feliz sobre entidades persistidas (armaId y terroristaId)
+        mockMvc.perform(post("/api/armas/" + armaId + "/simular")
+                        .param("agenteObjetivoId", String.valueOf(terroristaId))
                         .param("distancia", "15")
-                        .param("headshot", "true")
-                        .param("chaleco", "true"))
+                        .param("headshot", "true"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idArmaPersistida").value(armaId))
+                .andExpect(jsonPath("$.idAgenteObjetivoPersistido").value(terroristaId))
                 .andExpect(jsonPath("$.municionAntes").value(1))
                 .andExpect(jsonPath("$.municionDespues").value(0))
                 .andExpect(jsonPath("$.dañoInfligido", greaterThan(0)))
                 .andExpect(jsonPath("$.vidaObjetivoDespues", lessThan(100)));
 
-        // 2. Un GET posterior confirma que la munición 0 quedó persistida en H2
-        mockMvc.perform(get("/api/armas/" + id))
+        // 5. GET posterior del arma y del agente confirma que ambos estados quedaron actualizados en H2
+        mockMvc.perform(get("/api/armas/" + armaId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.municion").value(0));
 
-        // 3. Excepción Hija 1 (MunicionInsuficienteException -> 409 Conflict): intentar disparar con munición 0
-        mockMvc.perform(post("/api/armas/" + id + "/simular")
-                        .param("equipoObjetivo", "Terrorista")
+        mockMvc.perform(get("/api/agentes/" + terroristaId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vida", lessThan(100)));
+
+        // 6. Excepción Hija 1 (MunicionInsuficienteException -> 409 Conflict): intentar disparar con munición 0 en H2
+        mockMvc.perform(post("/api/armas/" + armaId + "/simular")
+                        .param("agenteObjetivoId", String.valueOf(terroristaId))
                         .param("distancia", "15"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.tipoExcepcion").value("MunicionInsuficienteException"))
                 .andExpect(jsonPath("$.jerarquiaPadre").value("ReglaDeJuegoException"))
                 .andExpect(jsonPath("$.estado").value(409));
 
-        // 4. Recargar el arma en H2
-        mockMvc.perform(post("/api/armas/" + id + "/recargar").param("balas", "5"))
+        // 7. Recargar el arma en H2
+        mockMvc.perform(post("/api/armas/" + armaId + "/recargar").param("balas", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.municionDespues").value(5));
 
-        // 5. Excepción Hija 2 (FuegoAmigoException -> 422 Unprocessable Entity): atacar al mismo equipo con fuegoAmigo=false
-        mockMvc.perform(post("/api/armas/" + id + "/simular")
-                        .param("equipoObjetivo", "Counter-Terrorista")
-                        .param("distancia", "10")
-                        .param("fuegoAmigo", "false"))
+        // 8. Excepción Hija 2 (FuegoAmigoException -> 422 Unprocessable Entity): atacar al AgenteCT aliado guardado en H2
+        mockMvc.perform(post("/api/armas/" + armaId + "/simular")
+                        .param("agenteObjetivoId", String.valueOf(aliadoCtId))
+                        .param("distancia", "10"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.tipoExcepcion").value("FuegoAmigoException"))
                 .andExpect(jsonPath("$.jerarquiaPadre").value("ReglaDeJuegoException"))
                 .andExpect(jsonPath("$.estado").value(422));
+    }
+
+    @Test
+    @DisplayName("Validación de invariantes en Service: rechaza GranadaHE con radioExplosion negativo (-3) y no la guarda en H2")
+    void serviceRechazaGranadaConRadioExplosionNegativo() throws Exception {
+        String granadaRadioNegativoJson = """
+                {
+                  "tipoArma": "GranadaHE",
+                  "nombre": "Granada HE Ilegal",
+                  "daño": 50,
+                  "precision": 1.0,
+                  "tiempoRecarga": 0.0,
+                  "precio": 300,
+                  "municion": 1,
+                  "capacidadCargador": 1,
+                  "radioExplosion": -3.0,
+                  "tiempoExplosion": 1.5,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+
+        mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(granadaRadioNegativoJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Regla de dominio violada"))
+                .andExpect(jsonPath("$.mensaje", containsString("El radio de explosión de una granada debe ser mayor a cero")));
     }
 
     @Test
@@ -282,11 +347,10 @@ public class ArmaControllerTest {
     @DisplayName("Regla de negocio en granadas: simula explosión con 3 clases del modelo (Equipo, Agente, GranadaHE)")
     void simulacionExplosionGranadaConTresClases() throws Exception {
         // Caso 1: Detonación válida contra equipo rival dentro del radio de 5m
-        mockMvc.perform(get("/api/armas/granadas/simular")
+        mockMvc.perform(post("/api/armas/granadas/simular")
                         .param("equipoAtacante", "Counter-Terrorista")
                         .param("equipoObjetivo", "Terrorista")
-                        .param("distancia", "2.0")
-                        .param("chaleco", "true"))
+                        .param("distancia", "2.0"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.explosivo").value("Granada HE"))
                 .andExpect(jsonPath("$.clasesParticipantes", hasSize(3)))
@@ -295,11 +359,10 @@ public class ArmaControllerTest {
                 .andExpect(jsonPath("$.municionRestante").value("0/1"));
 
         // Caso 2: Rechazo por regla de negocio de Fuego Amigo (FuegoAmigoException -> 422 Unprocessable Entity)
-        mockMvc.perform(get("/api/armas/granadas/simular")
+        mockMvc.perform(post("/api/armas/granadas/simular")
                         .param("equipoAtacante", "Counter-Terrorista")
                         .param("equipoObjetivo", "Counter-Terrorista")
-                        .param("distancia", "1.5")
-                        .param("fuegoAmigo", "false"))
+                        .param("distancia", "1.5"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.tipoExcepcion").value("FuegoAmigoException"))
                 .andExpect(jsonPath("$.mensaje", containsString("Fuego amigo bloqueado")));
