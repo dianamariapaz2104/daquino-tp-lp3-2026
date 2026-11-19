@@ -296,6 +296,9 @@ public class ArmaControllerTest {
     @Test
     @DisplayName("Validación de invariantes en Service: rechaza GranadaHE con radioExplosion negativo (-3) y no la guarda en H2")
     void serviceRechazaGranadaConRadioExplosionNegativo() throws Exception {
+        MvcResult antes = mockMvc.perform(get("/api/armas/todas")).andExpect(status().isOk()).andReturn();
+        int cantidadAntes = ((java.util.List<?>) JsonPath.read(antes.getResponse().getContentAsString(), "$")).size();
+
         String granadaRadioNegativoJson = """
                 {
                   "tipoArma": "GranadaHE",
@@ -318,6 +321,96 @@ public class ArmaControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Regla de dominio violada"))
                 .andExpect(jsonPath("$.mensaje", containsString("El radio de explosión de una granada debe ser mayor a cero")));
+
+        // También rechaza munición (50) mayor al cargador (30)
+        String municionMayorACargadorJson = """
+                {
+                  "tipoArma": "M4A4",
+                  "nombre": "M4A4 Sobrecargada",
+                  "daño": 30,
+                  "precision": 0.85,
+                  "tiempoRecarga": 2.0,
+                  "precio": 3100,
+                  "municion": 50,
+                  "capacidadCargador": 30,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+
+        mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(municionMayorACargadorJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("no puede superar la capacidad del cargador")));
+
+        // Verificar que la colección en H2 no creció
+        MvcResult despues = mockMvc.perform(get("/api/armas/todas")).andExpect(status().isOk()).andReturn();
+        int cantidadDespues = ((java.util.List<?>) JsonPath.read(despues.getResponse().getContentAsString(), "$")).size();
+        org.junit.jupiter.api.Assertions.assertEquals(cantidadAntes, cantidadDespues);
+    }
+
+    @Test
+    @DisplayName("PUT sin daño ni tiempoRecarga usa valores por defecto del constructor de DesertEagle (40 y 2.0) y responde 200")
+    void putSinDanioNiTiempoRecargaUsaValoresPorDefectoConstructor() throws Exception {
+        String crearJson = """
+                {
+                  "tipoArma": "DesertEagle",
+                  "nombre": "Desert Eagle Original",
+                  "daño": 48,
+                  "precision": 0.80,
+                  "tiempoRecarga": 2.2,
+                  "precio": 700,
+                  "municion": 7,
+                  "capacidadCargador": 7,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+        MvcResult postRes = mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(crearJson))
+                .andExpect(status().isCreated())
+                .andReturn();
+        long id = ((Number) JsonPath.read(postRes.getResponse().getContentAsString(), "$.id")).longValue();
+
+        String putSinDanioJson = """
+                {
+                  "tipoArma": "DesertEagle",
+                  "nombre": "Desert Eagle Sin Danio Explicito",
+                  "precision": 0.82,
+                  "precio": 750,
+                  "municion": 7,
+                  "capacidadCargador": 7,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+
+        mockMvc.perform(put("/api/armas/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(putSinDanioJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.daño").value(40))
+                .andExpect(jsonPath("$.tiempoRecarga").value(2.0));
+    }
+
+    @Test
+    @DisplayName("CRUD de Agente en H2 y rechazo de Agente con vida fuera de rango (150 HP)")
+    void crudAgenteYValidacionInvariantesEnService() throws Exception {
+        String agenteInvalidoJson = """
+                {
+                  "tipoAgente": "AgenteCT",
+                  "nombre": "Agente Ilegal",
+                  "vida": 150,
+                  "chalecoKevlar": 100,
+                  "dinero": 800,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+
+        mockMvc.perform(post("/api/agentes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(agenteInvalidoJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("La vida del agente debe estar entre 0 y 100")));
     }
 
     @Test

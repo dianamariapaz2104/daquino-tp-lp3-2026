@@ -521,6 +521,14 @@ public class ArmaService {
         String eq = (equipoAtacanteFallback != null && !equipoAtacanteFallback.trim().isEmpty())
                 ? equipoAtacanteFallback.trim()
                 : "Counter-Terrorista";
+
+        List<Arma> armasEquipo = armaRepository.findByEquipo_NombreIgnoreCase(eq);
+        for (Arma arma : armasEquipo) {
+            if (arma instanceof GranadaHE granadaExistente && granadaExistente.puedeDisparar()) {
+                return granadaExistente;
+            }
+        }
+
         GranadaHE granada = new GranadaHE(98, 1, new Equipo(eq));
         validarReglasDeNegocio(granada);
         return armaRepository.save(granada);
