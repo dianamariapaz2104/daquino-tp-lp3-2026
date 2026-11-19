@@ -228,30 +228,7 @@ public class ArmaController {
             @RequestParam(name = "nombre", defaultValue = "M4A4") String nombre,
             @RequestParam(name = "distancia", required = false) Integer distancia,
             @RequestParam(name = "headshot", defaultValue = "false") boolean headshot) {
-
-        if (distancia != null && distancia < 0) {
-            throw new IllegalArgumentException("La distancia de disparo no puede ser negativa: " + distancia);
-        }
-
-        Arma arma = armaService.fabricarArma(nombre, null, null, new Equipo("Counter-Terrorista"));
-
-        String resultadoAccion;
-        String metodoSobrecargadoUsado;
-
-        if (distancia == null) {
-            resultadoAccion = arma.disparar();
-            metodoSobrecargadoUsado = "disparar() [sin argumentos]";
-        } else {
-            resultadoAccion = arma.disparar(distancia, headshot);
-            metodoSobrecargadoUsado = "disparar(distancia=" + distancia + ", headshot=" + headshot + ")";
-        }
-
-        Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("arma", arma.getNombre());
-        respuesta.put("metodoSobrecargado", metodoSobrecargadoUsado);
-        respuesta.put("resultado", resultadoAccion);
-        respuesta.put("municionRestante", arma.getMunicion());
-        return respuesta;
+        return armaService.ejecutarDisparoSobrecargado(nombre, distancia, headshot);
     }
 
     @GetMapping("/api/agentes/polimorfismo")

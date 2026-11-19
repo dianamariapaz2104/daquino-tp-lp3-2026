@@ -15,6 +15,8 @@ import py.edu.uc.lp3.domain.AgenteTerrorista;
 import py.edu.uc.lp3.domain.Arma;
 import py.edu.uc.lp3.domain.DesertEagle;
 import py.edu.uc.lp3.domain.Equipo;
+import py.edu.uc.lp3.domain.Escopeta;
+import py.edu.uc.lp3.domain.Francotirador;
 import py.edu.uc.lp3.domain.FuegoAmigoException;
 import py.edu.uc.lp3.domain.Glock18;
 import py.edu.uc.lp3.domain.Granada;
@@ -24,6 +26,9 @@ import py.edu.uc.lp3.domain.M4A4;
 import py.edu.uc.lp3.domain.MP9;
 import py.edu.uc.lp3.domain.MunicionInsuficienteException;
 import py.edu.uc.lp3.domain.Nova;
+import py.edu.uc.lp3.domain.Pistola;
+import py.edu.uc.lp3.domain.Rifle;
+import py.edu.uc.lp3.domain.SubfusilSMG;
 import py.edu.uc.lp3.repository.AgenteRepository;
 import py.edu.uc.lp3.repository.ArmaRepository;
 
@@ -218,7 +223,7 @@ public class ArmaService {
             throw new IllegalArgumentException("El nombre del equipo no puede ser nulo ni vacío.");
         }
 
-        // Validación estricta de invariantes específicos de Granada (radioExplosion > 0 y tiempoExplosion > 0)
+        // Validación estricta de invariantes específicos de cada subclase de Arma
         if (arma instanceof Granada granada) {
             if (granada.getRadioExplosion() <= 0.0f) {
                 throw new IllegalArgumentException(
@@ -227,6 +232,46 @@ public class ArmaService {
             if (granada.getTiempoExplosion() <= 0.0f) {
                 throw new IllegalArgumentException(
                         "El tiempo de explosión de una granada debe ser mayor a cero: " + granada.getTiempoExplosion());
+            }
+        }
+        if (arma instanceof Rifle rifle) {
+            if (rifle.getRetroceso() < 0.0f) {
+                throw new IllegalArgumentException("El retroceso de un rifle no puede ser negativo: " + rifle.getRetroceso());
+            }
+            if (rifle.getModoDisparo() == null || rifle.getModoDisparo().trim().isEmpty()) {
+                throw new IllegalArgumentException("El modo de disparo del rifle no puede estar vacío.");
+            }
+        }
+        if (arma instanceof Pistola pistola) {
+            if (pistola.getCapacidadCargadorPistola() <= 0) {
+                throw new IllegalArgumentException("La capacidad del cargador de la pistola debe ser positiva: " + pistola.getCapacidadCargadorPistola());
+            }
+            if (pistola.getModoDisparo() == null || pistola.getModoDisparo().trim().isEmpty()) {
+                throw new IllegalArgumentException("El modo de disparo de la pistola no puede estar vacío.");
+            }
+        }
+        if (arma instanceof Escopeta escopeta) {
+            if (escopeta.getPerdigones() <= 0) {
+                throw new IllegalArgumentException("La cantidad de perdigones de la escopeta debe ser positiva: " + escopeta.getPerdigones());
+            }
+            if (escopeta.getDispersion() <= 0.0f) {
+                throw new IllegalArgumentException("La dispersión de la escopeta debe ser mayor a cero: " + escopeta.getDispersion());
+            }
+        }
+        if (arma instanceof SubfusilSMG subfusil) {
+            if (subfusil.getCadenciaFuego() <= 0.0f) {
+                throw new IllegalArgumentException("La cadencia de fuego del subfusil debe ser mayor a cero: " + subfusil.getCadenciaFuego());
+            }
+            if (subfusil.getMovilidad() <= 0.0f) {
+                throw new IllegalArgumentException("La movilidad del subfusil debe ser mayor a cero: " + subfusil.getMovilidad());
+            }
+        }
+        if (arma instanceof Francotirador francotirador) {
+            if (francotirador.getZoom() <= 0.0f) {
+                throw new IllegalArgumentException("El zoom del francotirador debe ser mayor a cero: " + francotirador.getZoom());
+            }
+            if (francotirador.getPenetracion() <= 0) {
+                throw new IllegalArgumentException("La penetración del francotirador debe ser positiva: " + francotirador.getPenetracion());
             }
         }
     }
@@ -590,6 +635,33 @@ public class ArmaService {
                 new Nova(),
                 new GranadaHE()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> ejecutarDisparoSobrecargado(String nombre, Integer distancia, boolean headshot) {
+        if (distancia != null && distancia < 0) {
+            throw new IllegalArgumentException("La distancia de disparo no puede ser negativa: " + distancia);
+        }
+
+        Arma arma = fabricarArma(nombre, null, null, new Equipo("Counter-Terrorista"));
+
+        String resultadoAccion;
+        String metodoSobrecargadoUsado;
+
+        if (distancia == null) {
+            resultadoAccion = arma.disparar();
+            metodoSobrecargadoUsado = "disparar() [sin argumentos]";
+        } else {
+            resultadoAccion = arma.disparar(distancia, headshot);
+            metodoSobrecargadoUsado = "disparar(distancia=" + distancia + ", headshot=" + headshot + ")";
+        }
+
+        Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("arma", arma.getNombre());
+        respuesta.put("metodoSobrecargado", metodoSobrecargadoUsado);
+        respuesta.put("resultado", resultadoAccion);
+        respuesta.put("municionRestante", arma.getMunicion());
+        return respuesta;
     }
 
     @Transactional(readOnly = true)
