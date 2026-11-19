@@ -1,9 +1,15 @@
 package py.edu.uc.lp3.domain;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
 @Embeddable
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        getterVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY,
+        setterVisibility = JsonAutoDetect.Visibility.NONE
+)
 public class Equipo {
 
     @Column(name = "equipo_nombre")
@@ -14,21 +20,11 @@ public class Equipo {
     }
 
     public Equipo(String nombre) {
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del equipo no puede ser nulo ni vacío.");
-        }
-        this.nombre = nombre.trim();
+        this.nombre = (nombre != null) ? nombre.trim() : "";
     }
 
     public String getNombre() {
         return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del equipo no puede ser nulo ni vacío.");
-        }
-        this.nombre = nombre.trim();
     }
 
     /**

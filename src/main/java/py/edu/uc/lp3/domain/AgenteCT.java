@@ -40,5 +40,4 @@ public class AgenteCT extends Agente {
     }
 
     public boolean isTieneKitDesactivacion() { return tieneKitDesactivacion; }
-    public void setTieneKitDesactivacion(boolean tieneKitDesactivacion) { this.tieneKitDesactivacion = tieneKitDesactivacion; }
 }

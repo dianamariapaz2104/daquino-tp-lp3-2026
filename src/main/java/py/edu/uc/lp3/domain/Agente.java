@@ -1,5 +1,6 @@
 package py.edu.uc.lp3.domain;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.persistence.DiscriminatorColumn;
@@ -15,12 +16,19 @@ import jakarta.persistence.Table;
 /**
  * Segunda jerarquía de clases del dominio Counter-Strike 2:
  * Modela a un Agente (Jugador/Operador táctico) que participa en la partida,
- * equipa armas/granadas y recibe daño en las simulaciones de combate y explosivos.
+ * equipa armas/granadas y mantiene su estado (vida, chaleco Kevlar, dinero y equipo).
+ * Las validaciones de invariantes y reglas de combate viven exclusivamente en ArmaService.
  */
 @Entity
 @Table(name = "agentes")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "tipo_agente")
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        getterVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY,
+        isGetterVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY,
+        setterVisibility = JsonAutoDetect.Visibility.NONE
+)
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
@@ -55,20 +63,7 @@ public abstract class Agente implements InspeccionableEnPartida {
     }
 
     public Agente(String nombre, int vida, int chalecoKevlar, int dinero, Equipo equipo) {
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del agente no puede ser nulo ni vacío.");
-        }
-        if (vida < 0 || vida > 100) {
-            throw new IllegalArgumentException("La vida del agente debe estar entre 0 y 100 HP: " + vida);
-        }
-        if (chalecoKevlar < 0 || chalecoKevlar > 100) {
-            throw new IllegalArgumentException("El chaleco Kevlar debe estar entre 0 y 100: " + chalecoKevlar);
-        }
-        if (dinero < 0 || dinero > 16000) {
-            throw new IllegalArgumentException("El dinero del agente debe estar entre $0 y $16,000: " + dinero);
-        }
-
-        this.nombre = nombre.trim();
+        this.nombre = (nombre != null) ? nombre.trim() : "";
         this.vida = vida;
         this.chalecoKevlar = chalecoKevlar;
         this.dinero = dinero;
@@ -89,7 +84,8 @@ public abstract class Agente implements InspeccionableEnPartida {
 
     @Override
     public String inspeccionarEnPartida() {
-        return "[Inspección de Agente] " + nombre + " (" + equipo.getNombre()
+        String eqNombre = (equipo != null) ? equipo.getNombre() : "Sin equipo";
+        return "[Inspección de Agente] " + nombre + " (" + eqNombre
                 + ") | Vida: " + vida + " HP | Kevlar: " + chalecoKevlar
                 + " | Rol: " + rolTactico();
     }
@@ -100,7 +96,7 @@ public abstract class Agente implements InspeccionableEnPartida {
     }
 
     // ==========================================
-    // Comportamiento del Dominio (Impacto Balístico y Explosivo)
+    // Consulta y Transiciones de Estado Controladas
     // ==========================================
 
     public boolean tieneChaleco() {
@@ -112,59 +108,31 @@ public abstract class Agente implements InspeccionableEnPartida {
     }
 
     /**
-     * Aplica el daño de una explosión o disparo al agente, desgastando su chaleco y su vida.
+     * Aplica el resultado de un impacto validado y calculado por ArmaService,
+     * sin exponer un setVida público libre.
      */
-    public void recibirDañoExplosivo(int dañoFinal) {
-        if (dañoFinal <= 0) {
-            return;
-        }
-        if (chalecoKevlar > 0) {
-            int desgasteChaleco = Math.min(chalecoKevlar, (int) Math.round(dañoFinal * 0.35));
-            chalecoKevlar -= desgasteChaleco;
-        }
-        this.vida = Math.max(0, this.vida - dañoFinal);
+    public void aplicarImpactoValidado(int nuevaVida, int nuevoChaleco) {
+        this.vida = nuevaVida;
+        this.chalecoKevlar = nuevoChaleco;
     }
 
-    // Getters y Setters con invariantes protegidos
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getTipoAgente() { return this.getClass().getSimpleName(); }
-
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) {
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del agente no puede ser nulo ni vacío.");
-        }
-        this.nombre = nombre.trim();
-    }
-
-    public int getVida() { return vida; }
-    public void setVida(int vida) {
-        if (vida < 0 || vida > 100) {
-            throw new IllegalArgumentException("La vida del agente debe estar entre 0 y 100 HP: " + vida);
-        }
+    /**
+     * Aplica un estado actualizado tras ser validado por ArmaService.
+     */
+    public void aplicarEstadoValidado(String nombre, int vida, int chalecoKevlar, int dinero, Equipo equipo) {
+        this.nombre = (nombre != null) ? nombre.trim() : "";
         this.vida = vida;
-    }
-
-    public int getChalecoKevlar() { return chalecoKevlar; }
-    public void setChalecoKevlar(int chalecoKevlar) {
-        if (chalecoKevlar < 0 || chalecoKevlar > 100) {
-            throw new IllegalArgumentException("El chaleco Kevlar debe estar entre 0 y 100: " + chalecoKevlar);
-        }
         this.chalecoKevlar = chalecoKevlar;
-    }
-
-    public int getDinero() { return dinero; }
-    public void setDinero(int dinero) {
-        if (dinero < 0 || dinero > 16000) {
-            throw new IllegalArgumentException("El dinero del agente debe estar entre $0 y $16,000: " + dinero);
-        }
         this.dinero = dinero;
-    }
-
-    public Equipo getEquipo() { return equipo; }
-    public void setEquipo(Equipo equipo) {
         this.equipo = (equipo != null) ? equipo : new Equipo("Counter-Terrorista");
     }
+
+    // Solo Getters públicos (sin setVida ni setters libres que rompan el ocultamiento)
+    public Long getId() { return id; }
+    public String getTipoAgente() { return this.getClass().getSimpleName(); }
+    public String getNombre() { return nombre; }
+    public int getVida() { return vida; }
+    public int getChalecoKevlar() { return chalecoKevlar; }
+    public int getDinero() { return dinero; }
+    public Equipo getEquipo() { return equipo; }
 }

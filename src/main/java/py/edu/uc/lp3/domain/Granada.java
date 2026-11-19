@@ -42,25 +42,28 @@ public abstract class Granada extends Arma {
      * el radio de explosión de la granada y si el objetivo lleva chaleco Kevlar.
      */
     public int calcularDañoOndaExpansiva(double distanciaMetros, boolean tieneChaleco) {
-        if (distanciaMetros < 0) {
-            throw new IllegalArgumentException("La distancia al epicentro de la explosión no puede ser negativa: " + distanciaMetros);
-        }
-        if (distanciaMetros > radioExplosion) {
-            return 0; // Fuera del radio de explosión la onda expansiva no alcanza al objetivo
+        if (distanciaMetros < 0 || distanciaMetros > radioExplosion || radioExplosion <= 0) {
+            return 0;
         }
 
         double factorCercania = 1.0 - (distanciaMetros / radioExplosion);
         double dañoBruto = getDaño() * factorCercania;
 
         if (tieneChaleco) {
-            dañoBruto *= 0.60; // El chaleco Kevlar en CS2 absorbe el 40% del daño por metralla
+            dañoBruto *= 0.60;
         }
         return (int) Math.round(dañoBruto);
     }
 
-    public float getRadioExplosion() { return radioExplosion; }
-    public void setRadioExplosion(float radioExplosion) { this.radioExplosion = radioExplosion; }
+    /**
+     * Permite a ArmaService actualizar parámetros de explosivo tras validar invariantes.
+     * No se exponen setRadioExplosion ni setTiempoExplosion públicos libres.
+     */
+    public void aplicarParametrosExplosivoValidados(float radioExplosion, float tiempoExplosion) {
+        this.radioExplosion = radioExplosion;
+        this.tiempoExplosion = tiempoExplosion;
+    }
 
+    public float getRadioExplosion() { return radioExplosion; }
     public float getTiempoExplosion() { return tiempoExplosion; }
-    public void setTiempoExplosion(float tiempoExplosion) { this.tiempoExplosion = tiempoExplosion; }
 }

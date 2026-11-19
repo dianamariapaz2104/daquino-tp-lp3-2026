@@ -1,5 +1,6 @@
 package py.edu.uc.lp3.domain;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import jakarta.persistence.DiscriminatorColumn;
@@ -16,6 +17,11 @@ import jakarta.persistence.Table;
 @Table(name = "armas")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "tipo_arma")
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        getterVisibility = JsonAutoDetect.Visibility.PUBLIC_ONLY,
+        setterVisibility = JsonAutoDetect.Visibility.NONE
+)
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.EXISTING_PROPERTY,
@@ -51,14 +57,14 @@ public abstract class Arma implements InspeccionableEnPartida {
 
     /**
      * Constructor simple requerido por JPA y de negocio por defecto:
-     * deja el objeto en un estado legal garantizado.
+     * delega con this(...) en el constructor completo.
      */
     public Arma() {
         this("Arma Genérica", 20, 0.70f, 2.0f, 1000, new Equipo("Counter-Terrorista"), 20, 20);
     }
 
     /**
-     * Constructor sobrecargado (7 parámetros).
+     * Constructor sobrecargado (7 parámetros): delega en el de 8 parámetros.
      */
     public Arma(String nombre, int daño, float precision,
                 float tiempoRecarga, int precio, Equipo equipo, int municion) {
@@ -66,37 +72,14 @@ public abstract class Arma implements InspeccionableEnPartida {
     }
 
     /**
-     * Constructor sobrecargado completo (8 parámetros) con verificación rigurosa de invariantes.
+     * Constructor sobrecargado completo (8 parámetros).
+     * Inicializa el estado de la entidad; las validaciones de invariantes y reglas de negocio
+     * viven exclusivamente en ArmaService.
      */
     public Arma(String nombre, int daño, float precision,
                 float tiempoRecarga, int precio, Equipo equipo,
                 int municion, int capacidadCargador) {
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del arma no puede ser nulo ni vacío.");
-        }
-        if (daño <= 0) {
-            throw new IllegalArgumentException("El daño debe ser mayor a cero: " + daño);
-        }
-        if (municion < 0) {
-            throw new IllegalArgumentException("La munición no puede ser negativa: " + municion);
-        }
-        if (capacidadCargador <= 0) {
-            throw new IllegalArgumentException("La capacidad del cargador debe ser positiva: " + capacidadCargador);
-        }
-        if (municion > capacidadCargador) {
-            throw new IllegalArgumentException("La munición (" + municion + ") no puede superar la capacidad del cargador (" + capacidadCargador + ").");
-        }
-        if (precio < 0) {
-            throw new IllegalArgumentException("El precio no puede ser negativo: " + precio);
-        }
-        if (precision < 0.0f || precision > 1.0f) {
-            throw new IllegalArgumentException("La precisión debe estar comprendida entre 0.0 y 1.0: " + precision);
-        }
-        if (tiempoRecarga < 0.0f) {
-            throw new IllegalArgumentException("El tiempo de recarga no puede ser negativo: " + tiempoRecarga);
-        }
-
-        this.nombre = nombre.trim();
+        this.nombre = (nombre != null) ? nombre.trim() : "";
         this.daño = daño;
         this.precision = precision;
         this.tiempoRecarga = tiempoRecarga;
@@ -110,14 +93,8 @@ public abstract class Arma implements InspeccionableEnPartida {
     // Métodos Abstractos (Sobreescritura en hijas)
     // ==========================================
 
-    /**
-     * Describe el rol táctico y estilo de combate distintivo de cada arma en CS2.
-     */
     public abstract String comportamientoDeCombate();
 
-    /**
-     * Efectúa la acción básica de disparo de cada subclase, resolviendo su propia mecánica y sonido.
-     */
     public abstract String disparar();
 
     // ==========================================
@@ -149,21 +126,17 @@ public abstract class Arma implements InspeccionableEnPartida {
      * Sobrecarga 2: Disparo con distancia y posibilidad de impacto crítico en cabeza (headshot).
      */
     public String disparar(int distanciaMetros, boolean tiroALaCabeza) {
-        if (distanciaMetros < 0) {
-            throw new IllegalArgumentException("La distancia de disparo no puede ser negativa: " + distanciaMetros);
-        }
         if (!puedeDisparar()) {
             return "[" + nombre + "] *Click* ¡Sin munición! Necesita recargar.";
         }
 
         gastarMunicion();
 
-        // Atenuación de daño en base a la distancia y precisión del arma
         double factorAtenuacion = Math.max(0.15, 1.0 - (distanciaMetros * (1.0 - precision) / 100.0));
         int dañoCalculado = (int) Math.round(daño * factorAtenuacion);
 
         if (tiroALaCabeza) {
-            dañoCalculado *= 4; // Multiplicador crítico de headshot en CS2
+            dañoCalculado *= 4;
             return "[" + nombre + "] ¡HEADSHOT a " + distanciaMetros + "m! Impacto crítico infligiendo "
                     + dañoCalculado + " de daño. Balas restantes: " + municion + "/" + capacidadCargador + ".";
         } else {
@@ -173,86 +146,7 @@ public abstract class Arma implements InspeccionableEnPartida {
     }
 
     // ==========================================
-    // Reglas de Negocio del Juego en el Dominio (POO-08)
-    // ==========================================
-
-    /**
-     * Regla de Negocio 1 y 2 en el dominio:
-     * Ejecuta un disparo de combate desde esta Arma contra un Agente objetivo validando:
-     * - Control de Fuego Amigo entre el Equipo del arma y el Equipo del Agente (lanza FuegoAmigoException).
-     * - Disponibilidad de proyectiles en el cargador (lanza MunicionInsuficienteException).
-     * - Cálculo balístico por distancia, headshot y absorción en chaleco Kevlar y vida del Agente.
-     */
-    public int dispararContraAgente(Agente objetivo, int distanciaMetros, boolean tiroALaCabeza, boolean permitirFuegoAmigo) {
-        if (objetivo == null) {
-            throw new IllegalArgumentException("El agente objetivo no puede ser nulo.");
-        }
-        if (distanciaMetros < 0) {
-            throw new IllegalArgumentException("La distancia de combate no puede ser negativa: " + distanciaMetros);
-        }
-        if (this.equipo != null && this.equipo.esMismoEquipo(objetivo.getEquipo()) && !permitirFuegoAmigo) {
-            throw new FuegoAmigoException(
-                    this.equipo.getNombre(),
-                    "Disparo con " + this.nombre + " contra aliado " + objetivo.getNombre(),
-                    "Regla de negocio CS2: Fuego amigo bloqueado en modo competitivo. El equipo '"
-                            + this.equipo.getNombre() + "' no puede atacar a un compañero de su mismo bando."
-            );
-        }
-        if (!puedeDisparar()) {
-            throw new MunicionInsuficienteException(
-                    this.nombre,
-                    this.municion,
-                    this.capacidadCargador,
-                    "Regla de negocio CS2: El arma '" + this.nombre
-                            + "' tiene el cargador vacío (0/" + this.capacidadCargador + "). Debe recargar antes de combatir."
-            );
-        }
-
-        gastarMunicion();
-
-        double factorAtenuacion = Math.max(0.15, 1.0 - (distanciaMetros * (1.0 - precision) / 100.0));
-        int dañoCalculado = (int) Math.round(daño * factorAtenuacion);
-        if (tiroALaCabeza) {
-            dañoCalculado *= 4;
-        }
-        if (this.equipo != null && this.equipo.esMismoEquipo(objetivo.getEquipo())) {
-            dañoCalculado = (int) Math.round(dañoCalculado * 0.65);
-        }
-
-        objetivo.recibirDañoExplosivo(dañoCalculado);
-        return dañoCalculado;
-    }
-
-    /**
-     * Regla de Negocio de Carga de Munición:
-     * Valida que la cantidad solicitada sea positiva y que el cargador no esté ya lleno,
-     * lanzando MunicionInsuficienteException si la operación de recarga es inválida.
-     */
-    public int cargarMunicionValidada(int balas) {
-        if (balas <= 0) {
-            throw new MunicionInsuficienteException(
-                    this.nombre,
-                    this.municion,
-                    this.capacidadCargador,
-                    "Regla de negocio CS2: La cantidad de proyectiles a cargar debe ser mayor a cero (recibido: " + balas + ")."
-            );
-        }
-        if (this.municion >= this.capacidadCargador) {
-            throw new MunicionInsuficienteException(
-                    this.nombre,
-                    this.municion,
-                    this.capacidadCargador,
-                    "Regla de negocio CS2: El cargador de '" + this.nombre + "' ya está al máximo de su capacidad ("
-                            + this.municion + "/" + this.capacidadCargador + ")."
-            );
-        }
-        int municionAnterior = this.municion;
-        this.municion = Math.min(this.capacidadCargador, this.municion + balas);
-        return this.municion - municionAnterior;
-    }
-
-    // ==========================================
-    // Encapsulamiento y Gestión de Estado
+    // Encapsulamiento y Transiciones de Estado
     // ==========================================
 
     public boolean puedeDisparar() {
@@ -265,15 +159,34 @@ public abstract class Arma implements InspeccionableEnPartida {
         }
     }
 
+    public void consumirProyectil() {
+        gastarMunicion();
+    }
+
     public void recargar() {
         this.municion = this.capacidadCargador;
     }
 
     public void recargar(int balas) {
-        if (balas < 0) {
-            throw new IllegalArgumentException("Las balas a recargar no pueden ser negativas: " + balas);
+        if (balas > 0) {
+            this.municion = Math.min(this.capacidadCargador, this.municion + balas);
         }
-        this.municion = Math.min(this.capacidadCargador, this.municion + balas);
+    }
+
+    /**
+     * Aplica un nuevo estado previamente validado por ArmaService, sin exponer setters públicos descontrolados.
+     */
+    public void aplicarEstadoValidado(String nombre, int daño, float precision,
+                                      float tiempoRecarga, int precio, Equipo equipo,
+                                      int municion, int capacidadCargador) {
+        this.nombre = (nombre != null) ? nombre.trim() : "";
+        this.daño = daño;
+        this.precision = precision;
+        this.tiempoRecarga = tiempoRecarga;
+        this.precio = precio;
+        this.equipo = (equipo != null) ? equipo : new Equipo("Counter-Terrorista");
+        this.capacidadCargador = capacidadCargador;
+        this.municion = municion;
     }
 
     public String obtenerInfo() {
@@ -286,70 +199,15 @@ public abstract class Arma implements InspeccionableEnPartida {
                 + " | Munición: " + municion + "/" + capacidadCargador;
     }
 
-    // Getters y Setters con invariantes protegidos para JPA y serialización JSON
+    // Solo Getters públicos (sin setters públicos descontrolados)
     public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
     public String getTipoArma() { return this.getClass().getSimpleName(); }
-
     public String getNombre() { return nombre; }
-    public void setNombre(String nombre) {
-        if (nombre == null || nombre.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del arma no puede ser nulo ni vacío.");
-        }
-        this.nombre = nombre.trim();
-    }
-
     public int getDaño() { return daño; }
-    public void setDaño(int daño) {
-        if (daño <= 0) {
-            throw new IllegalArgumentException("El daño debe ser mayor a cero: " + daño);
-        }
-        this.daño = daño;
-    }
-
     public float getPrecision() { return precision; }
-    public void setPrecision(float precision) {
-        if (precision < 0.0f || precision > 1.0f) {
-            throw new IllegalArgumentException("La precisión debe estar comprendida entre 0.0 y 1.0: " + precision);
-        }
-        this.precision = precision;
-    }
-
     public float getTiempoRecarga() { return tiempoRecarga; }
-    public void setTiempoRecarga(float tiempoRecarga) {
-        if (tiempoRecarga < 0.0f) {
-            throw new IllegalArgumentException("El tiempo de recarga no puede ser negativo: " + tiempoRecarga);
-        }
-        this.tiempoRecarga = tiempoRecarga;
-    }
-
     public int getPrecio() { return precio; }
-    public void setPrecio(int precio) {
-        if (precio < 0) {
-            throw new IllegalArgumentException("El precio no puede ser negativo: " + precio);
-        }
-        this.precio = precio;
-    }
-
     public Equipo getEquipo() { return equipo; }
-    public void setEquipo(Equipo equipo) {
-        this.equipo = (equipo != null) ? equipo : new Equipo("Counter-Terrorista");
-    }
-
     public int getMunicion() { return municion; }
-    public void setMunicion(int municion) {
-        if (municion < 0) {
-            throw new IllegalArgumentException("La munición no puede ser negativa: " + municion);
-        }
-        this.municion = municion;
-    }
-
     public int getCapacidadCargador() { return capacidadCargador; }
-    public void setCapacidadCargador(int capacidadCargador) {
-        if (capacidadCargador <= 0) {
-            throw new IllegalArgumentException("La capacidad del cargador debe ser positiva: " + capacidadCargador);
-        }
-        this.capacidadCargador = capacidadCargador;
-    }
 }

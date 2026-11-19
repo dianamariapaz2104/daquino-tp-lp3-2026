@@ -41,5 +41,4 @@ public class AgenteTerrorista extends Agente {
     }
 
     public boolean isPortaBombaC4() { return portaBombaC4; }
-    public void setPortaBombaC4(boolean portaBombaC4) { this.portaBombaC4 = portaBombaC4; }
 }

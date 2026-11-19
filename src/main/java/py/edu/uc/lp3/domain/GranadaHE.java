@@ -57,53 +57,34 @@ public class GranadaHE extends Granada {
     }
 
     /**
-     * Simula la detonación táctica de la Granada HE interactuando con Granada, Arma y Equipo.
-     * Lanza las excepciones hijas del dominio cuando se incumple la regla de munición o fuego amigo.
+     * Sobrecarga 1: Detonación en área devolviendo el reporte táctico.
+     * Las validaciones de reglas de juego y excepciones viven en ArmaService.
      */
     public String detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo) {
-        return detonarEnArea(distanciaMetros, tieneChaleco, equipoObjetivo, true);
+        return detonarEnArea(distanciaMetros, tieneChaleco, equipoObjetivo, false);
     }
 
     /**
-     * Sobrecarga con validación explícita de Fuego Amigo en el dominio.
+     * Sobrecarga 2: Detonación en área indicando si hubo penalización por fuego amigo.
      */
-    public String detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo, boolean permitirFuegoAmigo) {
-        if (!puedeDisparar()) {
-            throw new MunicionInsuficienteException(
-                    getNombre(),
-                    getMunicion(),
-                    getCapacidadCargador(),
-                    "La Granada HE ya fue detonada (munición 0/" + getCapacidadCargador() + ")."
-            );
-        }
-
-        boolean fuegoAmigo = getEquipo().esMismoEquipo(equipoObjetivo);
-        if (fuegoAmigo && !permitirFuegoAmigo) {
-            throw new FuegoAmigoException(
-                    getEquipo().getNombre(),
-                    "Lanzamiento de Granada HE contra aliado",
-                    "Regla de negocio CS2: Fuego amigo bloqueado en modo competitivo. El equipo '"
-                            + getEquipo().getNombre() + "' no puede lanzar una Granada HE contra un aliado de su mismo equipo."
-            );
-        }
-
+    public String detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo, boolean aplicarReduccionFuegoAmigo) {
         int dañoEfectivo = calcularDañoOndaExpansiva(distanciaMetros, tieneChaleco);
-        if (fuegoAmigo && dañoEfectivo > 0) {
-            // En CS2 el fuego amigo reduce el daño infligido a compañeros de equipo
+        if (aplicarReduccionFuegoAmigo && dañoEfectivo > 0) {
             dañoEfectivo = (int) Math.round(dañoEfectivo * 0.65);
         }
 
         gastarMunicion();
 
+        String nombreEquipoObj = (equipoObjetivo != null) ? equipoObjetivo.getNombre() : "Desconocido";
         if (distanciaMetros > getRadioExplosion()) {
             return "[" + getNombre() + "] Detonó a " + getTiempoExplosion() + "s, pero el objetivo del equipo "
-                    + equipoObjetivo.getNombre() + " estaba a " + distanciaMetros + "m (fuera del radio de "
+                    + nombreEquipoObj + " estaba a " + distanciaMetros + "m (fuera del radio de "
                     + getRadioExplosion() + "m). Daño: 0.";
         }
 
         return "[" + getNombre() + "] ¡KABOOM tras " + getTiempoExplosion() + "s! Onda expansiva a "
                 + distanciaMetros + "m (radio máx " + getRadioExplosion() + "m) contra equipo "
-                + equipoObjetivo.getNombre() + (tieneChaleco ? " [con Kevlar]" : " [sin Kevlar]")
+                + nombreEquipoObj + (tieneChaleco ? " [con Kevlar]" : " [sin Kevlar]")
                 + " -> Daño explosivo final: " + dañoEfectivo + ".";
     }
 }
