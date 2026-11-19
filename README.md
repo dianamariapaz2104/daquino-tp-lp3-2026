@@ -2,12 +2,12 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Trabajo práctico de Lenguaje de Programación 3. Es un servicio web hecho con Spring Boot 3.3.4, Spring Data JPA y base de datos H2 que modela las armas, agentes y equipos del juego Counter-Strike 2 respetando la arquitectura en capas (`Controller` -> `Service` -> `Repository`).
+Trabajo práctico de Lenguaje de Programación 3. Es un servicio web hecho con Spring Boot 3.3.4, Spring Data JPA y base de datos H2 que modela las armas, agentes y equipos del juego Counter-Strike 2 respetando estrictamente la arquitectura en 3 capas (`Controller` -> `Service` -> `Repository`).
 
-Para armar esto usé herencia, polimorfismo, encapsulamiento, una interfaz de dominio (`InspeccionableEnPartida`), invariantes y una jerarquía de excepciones propias (`ReglaDeJuegoException`, `MunicionInsuficienteException` y `FuegoAmigoException`).
+Para armar esto usé herencia, polimorfismo, ocultamiento de estado en las entidades (sin setters públicos descontrolados ni excepciones lanzadas desde el dominio), una interfaz de dominio (`InspeccionableEnPartida`), invariantes validados exclusivamente en `ArmaService` y una jerarquía de excepciones propias (`ReglaDeJuegoException`, `MunicionInsuficienteException` y `FuegoAmigoException`).
 
-> **Enlace exacto al commit de la solución (POO-08):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/db037aed8fcbf7512b2bbc6cf4d135a3d86d5236  
-> **Commit anterior (CRUD H2 inicial):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/465a7d8726658c6525f6a1041c2ff58f26a11635  
+> **Enlace exacto al commit corregido (POO-08):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/0ebed925fcbc017cb112a0a7bd1ce74cb73b2c75  
+> **Commit entrega POO-08 inicial:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/2b8dd29af0449bda75290b1d571a031b24019f9f  
 > **Commit de la entrega POO-06:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/f8757155883626bc2b6ccb6883b07afd4650fa70
 
 ---
@@ -23,7 +23,7 @@ Con Java 21, se puede levantar el proyecto desde la terminal así:
 - Para ver si funciona se entra a `http://localhost:8080/`.
 - La consola de la base de datos H2 está en `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./data/armas`, usuario: `sa`, contraseña vacía).
 
-Para correr los tests del proyecto:
+Para correr los 21 tests del proyecto:
 
 ```bash
 ./mvnw test
@@ -46,19 +46,19 @@ Para correr los tests del proyecto:
 
 ---
 
-## Las dos reglas de negocio del juego
+## Las dos reglas de negocio del juego (ejecutadas en `ArmaService`)
 
-En la simulación participan las tres clases principales de mi modelo (`Arma` con sus hijas como `DesertEagle`, `M4A4` y `GranadaHE`; `Agente` con sus hijas `AgenteCT` y `AgenteTerrorista`; y `Equipo`):
+En la simulación participan las tres clases principales de mi modelo cargadas desde H2 (`Arma` con sus hijas como `DesertEagle`, `M4A4` y `GranadaHE`; `Agente` con sus hijas `AgenteCT` y `AgenteTerrorista`; y `Equipo`), y todas las validaciones y lanzamientos de excepciones viven exclusivamente en `ArmaService`:
 
-1. **Regla 1 (munición, cargador y fuego amigo en `Arma`, `GranadaHE` y `Equipo`):** Un `Arma` solo puede disparar si le quedan balas en el cargador (`municion > 0`) y solo permite recargar cuando no está lleno y las balas son positivas (si no, lanza `MunicionInsuficienteException`), además de bloquear ataques contra un `Agente` del mismo `Equipo` si el fuego amigo está desactivado (lanzando `FuegoAmigoException`).
-2. **Regla 2 (daño y absorción de Kevlar en `Arma` y `Agente`):** Cuando el disparo o explosión impacta en un `Agente`, el `Arma` descuenta 1 proyectil, calcula el daño según la distancia y si fue headshot, y el `Agente` absorbe el 35% del golpe en su `chalecoKevlar` antes de restar el daño de su `vida` en H2.
+1. **Regla 1 (munición, cargador y fuego amigo en `ArmaService` sobre `Arma`, `Agente` y `Equipo` persistidos en H2):** `ArmaService` carga el `Arma` y el `Agente` objetivo desde H2 por sus IDs, verifica si ambos pertenecen al mismo `Equipo` guardado en H2 (si son del mismo bando, lanza `FuegoAmigoException` con estado `422`), y verifica que al `Arma` le queden proyectiles (`municion > 0`) o que al recargar la cantidad sea positiva y el cargador no esté lleno (si no, lanza `MunicionInsuficienteException` con estado `409`).
+2. **Regla 2 (daño y absorción de Kevlar en `ArmaService` actualizando `Arma` y `Agente` en H2):** Cuando el disparo o explosión es válido, `ArmaService` descuenta 1 proyectil del `Arma`, calcula el daño según la distancia y si fue headshot, calcula el 35% de desgaste sobre el `chalecoKevlar` del `Agente` y el descuento de su `vida`, y persiste los nuevos estados de ambas entidades en H2.
 
 ---
 
 ## ¿Qué cambió con la sobrecarga y sobreescritura?
 
 **Sobrecarga:**
-En `Arma` y en las clases hijas armé 3 constructores sobrecargados: uno vacío (que también sirve para JPA y deja valores válidos por defecto), uno intermedio y otro completo que recibe todos los datos.
+En `Arma`, `Agente` y en las clases hijas armé 3 constructores sobrecargados: uno vacío (que delega con `this(...)` en el completo y sirve para JPA dejando valores válidos por defecto), uno intermedio y otro completo que recibe todos los datos.
 También sobrecargué `disparar()` (sin parámetros, con distancia, y con distancia más `tiroALaCabeza`), `recargar()` y `detonarEnArea()`. Así uso el mismo nombre de método con distinta cantidad de parámetros según lo que necesite.
 
 **Sobreescritura (Overriding):**
@@ -69,38 +69,38 @@ En la clase abstracta `Arma` declaré `comportamientoDeCombate()` y `disparar()`
 ## Respuestas a «Qué hay que pensar»
 
 **Recurso y verbo:**  
-El sustantivo principal de mi API es `/api/armas` (y `/api/agentes`). La URL nombra al recurso y el verbo HTTP dice qué operación se hace: `POST` para crear (`201 Created`), `GET` para leer (`200 OK`), `PUT` para actualizar (`200 OK`) y `DELETE` para borrar (`200 OK`).
+Los sustantivos principales de mi API son `/api/armas` y `/api/agentes`. La URL nombra al recurso y el verbo HTTP dice qué operación se hace: `POST` para crear o disparar simulaciones que cambian estado (`201 Created` / `200 OK`), `GET` únicamente para consultar sin modificar la base (`200 OK`), `PUT` para actualizar (`200 OK`) y `DELETE` para borrar (`200 OK`).
 
 **Identidad:**  
 La clave primaria es el atributo `id` (`Long`) anotado con `@Id` y `@GeneratedValue(strategy = GenerationType.IDENTITY)`. La asigna directamente la base de datos H2 de forma autoincremental al guardar, así que en el JSON del `POST` no se manda el `id` y el servidor lo devuelve creado.
 
 **Herencia y tablas:**  
-Elegí `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` con la columna discriminadora `tipo_arma` en `Arma` y `tipo_agente` en `Agente`. Lo hice así porque todas las armas comparten casi todos los mismos datos (`daño`, `precision`, `precio`, `municion`, `capacidadCargador`) y es mucho más directo consultarlas en una sola tabla sin cruzar varias tablas con `JOIN`. En el JSON, Jackson distingue de qué subclase se trata usando el campo `"tipoArma"` con `@JsonTypeInfo` y `@JsonSubTypes`.
+Elegí `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` con la columna discriminadora `tipo_arma` en `Arma` y `tipo_agente` en `Agente`. Lo hice así porque todas las armas comparten casi todos los mismos datos (`daño`, `precision`, `precio`, `municion`, `capacidadCargador`) y es mucho más directo consultarlas en una sola tabla sin cruzar varias tablas con `JOIN`. En el JSON, Jackson distingue de qué subclase se trata usando el campo `"tipoArma"` (o `"tipoAgente"`) con `@JsonTypeInfo` y `@JsonSubTypes`.
 
 **Interfaz y repositorio:**  
-`ArmaRepository` y `AgenteRepository` son interfaces que extienden `JpaRepository`. Al depender de la interfaz, el servicio y el controller solo llaman a métodos como `save()`, `findById()` o `findAll()` sin importarles cómo se hace el SQL por detrás, igual que pasa con el polimorfismo de las interfaces que vimos en POO-07.
+`ArmaRepository` y `AgenteRepository` son interfaces que extienden `JpaRepository`. Al depender de la interfaz, el servicio solo llama a métodos como `save()`, `findById()` o `findAll()` sin importarle cómo se hace el SQL por detrás, igual que pasa con el polimorfismo de las interfaces que vimos en POO-07.
 
 **Protocolo del dominio:**  
 Armé la interfaz `InspeccionableEnPartida` en el paquete `domain` con los métodos `inspeccionarEnPartida()` y `calcularValorEconomico()`. La usa el endpoint `GET /api/armas/protocolo`, que junta en una misma lista objetos de dos familias distintas (`Arma` y `Agente`) y los recorre usando solo el tipo de la interfaz.
 
 **Ocultamiento:**  
-Las reglas numéricas las cuidan los constructores y los setters de `Arma`, `Agente` y `Equipo` (más el control del tope de `$16,000` en `ArmaService`). El constructor vacío que pide JPA carga valores legales por defecto y los setters validan cada dato antes de asignarlo, para que ni el JSON ni JPA puedan meter valores inválidos. En Insomnia, el pedido `06. POST /api/armas (Ilegal)` manda daño `-10` y munición `-5`, rebota con `400 Bad Request` y al listar con `03. GET /api/armas/todas` se ve que la base no se ensució.
+Todos los atributos de `Arma`, `Granada`, `Agente` y `Equipo` son `private`, `gastarMunicion()` es `protected`, y las entidades **no exponen setters públicos sin control** (como `setRadioExplosion`, `setTiempoExplosion`, `setVida` o `setMunicion`). Jackson deserializa por campos (`@JsonAutoDetect`) y **todos los invariantes y topes del juego se validan exclusivamente en `ArmaService`** (`validarReglasDeNegocio` y `validarReglasDeAgente`): daño entre `1` y `500`, precio entre `$0` y `$16,000`, munición entre `0` y `capacidadCargador`, precisión entre `0.0` y `1.0`, tiempo de recarga `>= 0`, y en `Granada` tanto `radioExplosion > 0` como `tiempoExplosion > 0`. En Insomnia, el pedido `06. POST /api/armas (Ilegal)` manda una `GranadaHE` con `"radioExplosion": -3.0`: `ArmaService` lo rechaza con `400 Bad Request` y la fila no se guarda en H2.
 
 **PUT y PATCH:**  
-Usé `PUT /api/armas/{id}`, que reemplaza los campos editables del arma guardada. Si en el JSON del `PUT` se omite un número como `daño`, llega como `0` y el setter lanza error `400 Bad Request` porque viola el invariante de que el daño tiene que ser mayor a cero.
+Usé `PUT /api/armas/{id}`, que actualiza la entidad existente en H2 tras pasar por `ArmaService.validarReglasDeNegocio`. Como Jackson instancia primero la subclase indicada en `tipoArma` usando su constructor vacío (que delega con `this(...)` y carga los valores oficiales de CS2 por defecto, por ejemplo `daño = 40` y `tiempoRecarga = 2.0` en `DesertEagle`) antes de aplicar encima los campos presentes en el JSON, si en un `PUT` se omite `daño` o `tiempoRecarga`, el objeto conserva esos valores por defecto válidos de la subclase y responde `200 OK`; en cambio, si en el JSON se envía un valor inválido (como `"daño": 0`, `"municion": 50` en un cargador de `30`, o `"radioExplosion": -3`), `ArmaService` lo rechaza con `400 Bad Request`.
 
 **DELETE:**  
-En mi modelo, borrar con `DELETE /api/armas/{id}` significa sacar esa arma del inventario guardado en H2. Primero busca que el `id` exista (si no está devuelve `404 Not Found`) y después la elimina de la tabla.
+En mi modelo, borrar con `DELETE /api/armas/{id}` (o `DELETE /api/agentes/{id}`) significa sacar esa entidad de H2. Primero `ArmaService` verifica que el `id` exista (si no está lanza `NoSuchElementException` y devuelve `404 Not Found`) y después la elimina de la tabla.
 
 **Dos reglas:**  
-Los dos hechos que cambian el estado de más de un objeto son disparar/detonar validando munición y fuego amigo, y recibir el daño descontando chaleco Kevlar y vida en el agente. El endpoint de la simulación es `POST /api/armas/{id}/simular` (y también `GET /api/armas/granadas/simular`). Cuando corre, le resta 1 bala al `Arma` y le baja `chalecoKevlar` y `vida` al `Agente` en H2; si después hacés un `GET /api/armas/{id}`, se ve que la munición quedó descontada en la base.
+Los dos hechos que cambian el estado de más de un objeto son disparar/detonar validando munición y fuego amigo según los equipos guardados en H2, y aplicar el daño descontando chaleco Kevlar y vida en el agente objetivo guardado en H2. El endpoint de la simulación es `POST /api/armas/{id}/simular?agenteObjetivoId={agenteId}`. Cuando corre, `ArmaService` carga ambas entidades de H2, le resta 1 bala al `Arma` y le baja `chalecoKevlar` y `vida` al `Agente` en H2; si después hacés un `GET /api/armas/{id}` y un `GET /api/agentes/{agenteId}`, se ve que ambos cambios quedaron persistidos en la base.
 
 **Excepciones:**  
-La clase base se llama `ReglaDeJuegoException` y tiene dos hijas con el nombre de cada regla: `MunicionInsuficienteException` (cuando se intenta disparar con `0` balas o recargar mal, devuelve `409 Conflict`) y `FuegoAmigoException` (cuando se ataca a un compañero del mismo equipo con fuego amigo apagado, devuelve `422 Unprocessable Entity`). Un recurso que no existe (`NoSuchElementException` -> `404`) o un dato negativo al construir (`IllegalArgumentException` -> `400`) van por separado. El JSON de error muestra `error`, `tipoExcepcion`, `jerarquiaPadre`, `reglaViolada`, `mensaje` y `estado`. Usé excepciones no comprobadas (`RuntimeException`) para no ensuciar las firmas de los métodos con `throws` y para que Spring haga rollback automático si falla la transacción.
+La clase base se llama `ReglaDeJuegoException` y tiene dos hijas con el nombre de cada regla: `MunicionInsuficienteException` (cuando se intenta disparar con `0` balas o recargar mal, devuelve `409 Conflict`) y `FuegoAmigoException` (cuando el `Arma` y el `Agente` guardados en H2 pertenecen al mismo `Equipo`, devuelve `422 Unprocessable Entity`). Todas las excepciones son lanzadas exclusivamente por `ArmaService` y atrapadas por `ArmaController` con `@ExceptionHandler`.
 
 **Preguntas de anclaje:**
 - *¿Si mañana cambiamos H2 por otra base, qué archivos tocan y cuáles se quedan quietos?* Solo se tocan el `pom.xml` (para el driver de la nueva base) y `application.properties` (para la URL, usuario y clave). Las clases de `domain`, `repository`, `service` y `controller` quedan intactas.
-- *¿Quién lanza la excepción, el controller o el objeto del juego?* La lanza el objeto del juego en el dominio (`Arma` y `GranadaHE`). El controller solo la atrapa con `@ExceptionHandler` y arma la respuesta HTTP.
+- *¿Quién lanza la excepción, el controller, la entity o el service?* La lanza exclusivamente `ArmaService` al validar los invariantes y las reglas del juego. Las entidades (`domain`) solo mantienen su estado y el `controller` solo atrapa la excepción con `@ExceptionHandler` para devolver la respuesta HTTP.
 
 ---
 
@@ -109,19 +109,21 @@ La clase base se llama `ReglaDeJuegoException` y tiene dos hijas con el nombre d
 El archivo está en `insomnia/insomnia-cs2-collection.json`.
 
 1. En Insomnia ir a **Import** y elegir el archivo `insomnia/insomnia-cs2-collection.json`.
-2. Elegir el entorno **Base Environment** (`base_url = http://localhost:8080`, `arma_id = 1`).
+2. Elegir el entorno **Base Environment** (`base_url = http://localhost:8080`, `arma_id = 1`, `agente_terrorista_id = 1`, `agente_aliado_ct_id = 2`).
 3. Recorrer los pedidos en orden:
    - `01. GET /` — Verifica que la aplicación responde.
-   - `02. POST /api/armas` — Crea una `DesertEagle` en H2 (`201 Created`) con `7` balas. Si devuelve otro `id`, cambiar `arma_id` en el entorno.
+   - `02. POST /api/armas` — Crea una `DesertEagle` (`Counter-Terrorista`) en H2 (`201 Created`) con `7` balas.
    - `03. GET /api/armas/todas` — Muestra la lista de armas guardadas en H2.
    - `04. GET /api/armas/{id}` — Trae el arma creada por su `id`.
    - `05. PUT /api/armas/{id}` — Le actualiza el nombre, daño y precio en H2.
-   - `06. POST /api/armas (Ilegal)` — Manda daño `-10` y munición `-5`, da `400 Bad Request` y no guarda basura.
+   - `06. POST /api/armas (Ilegal)` — Manda una `GranadaHE` con `"radioExplosion": -3.0`; `ArmaService` lo rechaza con `400 Bad Request` y no ensucia H2.
    - `07. GET /api/armas/9999` — Busca un `id` inexistente y da `404 Not Found`.
    - `08. GET /api/armas/protocolo` — Muestra el resultado de usar la interfaz `InspeccionableEnPartida` con armas y agentes.
-   - `09. POST /api/armas/{id}/simular` — Simula el combate contra un `Terrorista`, baja la munición de `7` a `6` y le descuenta vida y chaleco al agente. Volviendo a correr el `04. GET /api/armas/{id}` se ve que quedó con `6` balas en H2.
-   - `10. POST /api/armas/{id}/recargar?balas=0` — Provoca la excepción hija `MunicionInsuficienteException` (`409 Conflict`).
-   - `11. POST /api/armas/{id}/simular (Mismo Equipo)` — Provoca la excepción hija `FuegoAmigoException` (`422 Unprocessable Entity`).
+   - `08b. POST /api/agentes` — Crea un `AgenteTerrorista` en H2 (`201 Created`) con `100` de vida y `100` de Kevlar.
+   - `08c. POST /api/agentes` — Crea un `AgenteCT` aliado en H2 (`201 Created`).
+   - `09. POST /api/armas/{id}/simular?agenteObjetivoId=1` — Simula el combate entre el `Arma` guardada en H2 y el `AgenteTerrorista` guardado en H2: baja la munición de `7` a `6` y le descuenta vida y chaleco al agente en H2.
+   - `10. POST /api/armas/{id}/recargar?balas=0` — Provoca la excepción hija `MunicionInsuficienteException` (`409 Conflict`) lanzada por `ArmaService`.
+   - `11. POST /api/armas/{id}/simular?agenteObjetivoId=2` — Simula el ataque contra el `AgenteCT` aliado guardado en H2 y provoca `FuegoAmigoException` (`422 Unprocessable Entity`) lanzada por `ArmaService`.
    - `12. DELETE /api/armas/{id}` — Borra el arma de H2 (un `GET` después da `404`).
 
 ---
@@ -158,12 +160,12 @@ classDiagram
     +calcularValorEconomico() int
     +disparar(int distanciaMetros) String
     +disparar(int distanciaMetros, boolean tiroALaCabeza) String
-    +dispararContraAgente(Agente objetivo, int distanciaMetros, boolean tiroALaCabeza, boolean permitirFuegoAmigo) int
-    +cargarMunicionValidada(int balas) int
     +puedeDisparar() boolean
     #gastarMunicion() void
+    +consumirProyectil() void
     +recargar() void
     +recargar(int balas) void
+    +aplicarEstadoValidado(String nombre, int daño, float precision, float tiempoRecarga, int precio, Equipo equipo, int municion, int capacidadCargador) void
     +obtenerInfo() String
   }
 
@@ -172,7 +174,6 @@ classDiagram
     +Equipo()
     +Equipo(String nombre)
     +getNombre() String
-    +setNombre(String nombre) void
     +esMismoEquipo(Equipo otro) boolean
     +toString() String
   }
@@ -247,6 +248,7 @@ classDiagram
     +lanzar() void
     +rebotar() void
     +calcularDañoOndaExpansiva(double distanciaMetros, boolean tieneChaleco) int
+    +aplicarParametrosExplosivoValidados(float radioExplosion, float tiempoExplosion) void
     +getRadioExplosion() float
     +getTiempoExplosion() float
   }
@@ -298,7 +300,7 @@ classDiagram
     +comportamientoDeCombate() String
     +disparar() String
     +detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo) String
-    +detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo, boolean permitirFuegoAmigo) String
+    +detonarEnArea(double distanciaMetros, boolean tieneChaleco, Equipo equipoObjetivo, boolean aplicarReduccionFuegoAmigo) String
   }
 
   class Agente {
@@ -318,7 +320,8 @@ classDiagram
     +calcularValorEconomico() int
     +tieneChaleco() boolean
     +estaVivo() boolean
-    +recibirDañoExplosivo(int dañoFinal) void
+    +aplicarImpactoValidado(int nuevaVida, int nuevoChaleco) void
+    +aplicarEstadoValidado(String nombre, int vida, int chalecoKevlar, int dinero, Equipo equipo) void
   }
 
   class AgenteCT {
@@ -329,7 +332,6 @@ classDiagram
     +rolTactico() String
     +ejecutarAccionEspecial() String
     +isTieneKitDesactivacion() boolean
-    +setTieneKitDesactivacion(boolean tieneKitDesactivacion) void
   }
 
   class AgenteTerrorista {
@@ -340,7 +342,6 @@ classDiagram
     +rolTactico() String
     +ejecutarAccionEspecial() String
     +isPortaBombaC4() boolean
-    +setPortaBombaC4(boolean portaBombaC4) void
   }
 
   class ReglaDeJuegoException {
@@ -389,15 +390,19 @@ classDiagram
     +obtenerPorId(Long id) Arma
     +actualizarArma(Long id, Arma datosActualizados) Arma
     +eliminarArma(Long id) void
+    +crearAgente(Agente agente) Agente
     +listarAgentes() List~Agente~
     +obtenerAgentePorId(Long id) Agente
+    +actualizarAgente(Long id, Agente datosActualizados) Agente
+    +eliminarAgente(Long id) void
     +validarReglasDeNegocio(Arma arma) void
-    +simularCombateConArmaPersistida(Long armaId, String equipoObjetivoNombre, int distanciaMetros, boolean tiroALaCabeza, boolean tieneChalecoKevlar, boolean permitirFuegoAmigo) Map
+    +validarReglasDeAgente(Agente agente) void
+    +simularCombateConEntidadesPersistidas(Long armaId, Long agenteObjetivoId, String equipoObjetivoFallback, int distanciaMetros, boolean tiroALaCabeza) Map
     +recargarArmaPersistida(Long armaId, int balas) Map
-    +simularExplosionGranada(String equipoAtacanteNombre, String equipoObjetivoNombre, double distanciaMetros, boolean tieneChalecoKevlar, boolean permitirFuegoAmigo, int dañoBase) Map
+    +simularExplosionGranada(Long granadaId, Long agenteObjetivoId, String equipoAtacanteFallback, String equipoObjetivoFallback, double distanciaMetros) Map
     +obtenerElementosProtocolo() List~InspeccionableEnPartida~
     +obtenerAgentesPolimorfismo() List~Agente~
-    +construirYGuardarArma(String nombre, Integer daño, Integer municion, String equipoNombre) Arma
+    +construirArmaValidada(String nombre, Integer daño, Integer municion, String equipoNombre) Arma
     +obtenerCatalogoPolimorfico() List~Arma~
     +fabricarArma(String nombre, Integer daño, Integer municion, Equipo equipo) Arma
   }
@@ -410,16 +415,19 @@ classDiagram
     +obtenerPorId(Long id) ResponseEntity~Arma~
     +actualizarArma(Long id, Arma armaActualizada) ResponseEntity~Arma~
     +eliminarArma(Long id) ResponseEntity~Map~
-    +consultarProtocoloInspeccionable() ResponseEntity~List~
-    +simularCombatePost(Long id, String equipoObjetivo, int distancia, boolean headshot, boolean chaleco, boolean fuegoAmigo) ResponseEntity~Map~
-    +simularCombateGet(Long id, String equipoObjetivo, int distancia, boolean headshot, boolean chaleco, boolean fuegoAmigo) ResponseEntity~Map~
-    +recargarArmaPersistida(Long id, int balas) ResponseEntity~Map~
+    +crearAgente(Agente agente) ResponseEntity~Agente~
     +listarAgentesPersistidos() ResponseEntity~List~
     +obtenerAgentePorId(Long id) ResponseEntity~Agente~
+    +actualizarAgente(Long id, Agente agenteActualizado) ResponseEntity~Agente~
+    +eliminarAgente(Long id) ResponseEntity~Map~
+    +consultarProtocoloInspeccionable() ResponseEntity~List~
+    +simularCombatePost(Long id, Long agenteObjetivoId, String equipoObjetivo, int distancia, boolean headshot) ResponseEntity~Map~
+    +recargarArmaPersistida(Long id, int balas) ResponseEntity~Map~
+    +simularExplosionGranadaPost(Long granadaId, Long agenteObjetivoId, String equipoAtacante, String equipoObjetivo, double distancia) ResponseEntity~Map~
+    +simularExplosionGranadaGet(Long granadaId, Long agenteObjetivoId, String equipoAtacante, String equipoObjetivo, double distancia) ResponseEntity~Map~
     +construirArma(String nombre, Integer municion, Integer daño, String equipoNombre) Map
     +demostrarPolimorfismo() List~Map~
     +dispararArma(String nombre, Integer distancia, boolean headshot) Map
-    +simularExplosionGranada(String equipoAtacante, String equipoObjetivo, double distancia, boolean chaleco, boolean fuegoAmigo, int dañoBase) ResponseEntity~Map~
     +demostrarPolimorfismoAgentes() List~Map~
     +manejarMunicionInsuficiente(MunicionInsuficienteException ex) ResponseEntity~Map~
     +manejarFuegoAmigo(FuegoAmigoException ex) ResponseEntity~Map~
@@ -459,6 +467,8 @@ classDiagram
   ArmaService --> AgenteRepository : usa
   ArmaRepository ..> Arma : gestiona
   AgenteRepository ..> Agente : gestiona
+  ArmaService ..> MunicionInsuficienteException : lanza
+  ArmaService ..> FuegoAmigoException : lanza
   ArmaController ..> MunicionInsuficienteException : maneja (409)
   ArmaController ..> FuegoAmigoException : maneja (422)
 ```
