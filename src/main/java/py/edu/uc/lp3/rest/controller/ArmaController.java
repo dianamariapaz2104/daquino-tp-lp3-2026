@@ -37,46 +37,31 @@ public class ArmaController {
     }
 
     // ==========================================
-    // Endpoints CRUD REST (3 Capas + H2)
+    // Endpoints CRUD REST de Arma (3 Capas + H2)
     // ==========================================
 
-    /**
-     * CREATE (POST /api/armas): Crea una nueva entidad Arma validando en el Service y persistiendo en H2.
-     */
     @PostMapping("/api/armas")
     public ResponseEntity<Arma> crearArma(@RequestBody Arma arma) {
         Arma guardada = armaService.crearArma(arma);
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 
-    /**
-     * READ ALL (GET /api/armas/todas): Lista todas las armas almacenadas en la base de datos H2.
-     */
     @GetMapping("/api/armas/todas")
     public ResponseEntity<List<Arma>> listarTodas() {
         return ResponseEntity.ok(armaService.listarTodas());
     }
 
-    /**
-     * READ BY ID (GET /api/armas/{id}): Obtiene un arma por su ID desde la base de datos H2.
-     */
     @GetMapping("/api/armas/{id:\\d+}")
     public ResponseEntity<Arma> obtenerPorId(@PathVariable Long id) {
         return ResponseEntity.ok(armaService.obtenerPorId(id));
     }
 
-    /**
-     * UPDATE (PUT /api/armas/{id}): Actualiza un arma existente en H2 pasando por las validaciones de negocio.
-     */
     @PutMapping("/api/armas/{id:\\d+}")
     public ResponseEntity<Arma> actualizarArma(@PathVariable Long id, @RequestBody Arma armaActualizada) {
         Arma actualizada = armaService.actualizarArma(id, armaActualizada);
         return ResponseEntity.ok(actualizada);
     }
 
-    /**
-     * DELETE (DELETE /api/armas/{id}): Elimina un arma de la base de datos H2 por su ID.
-     */
     @DeleteMapping("/api/armas/{id:\\d+}")
     public ResponseEntity<Map<String, Object>> eliminarArma(@PathVariable Long id) {
         armaService.eliminarArma(id);
@@ -87,13 +72,44 @@ public class ArmaController {
     }
 
     // ==========================================
+    // Endpoints CRUD REST de Agente (3 Capas + H2)
+    // ==========================================
+
+    @PostMapping("/api/agentes")
+    public ResponseEntity<Agente> crearAgente(@RequestBody Agente agente) {
+        Agente guardado = armaService.crearAgente(agente);
+        return ResponseEntity.status(HttpStatus.CREATED).body(guardado);
+    }
+
+    @GetMapping({"/api/agentes", "/api/agentes/todos"})
+    public ResponseEntity<List<Agente>> listarAgentesPersistidos() {
+        return ResponseEntity.ok(armaService.listarAgentes());
+    }
+
+    @GetMapping("/api/agentes/{id:\\d+}")
+    public ResponseEntity<Agente> obtenerAgentePorId(@PathVariable Long id) {
+        return ResponseEntity.ok(armaService.obtenerAgentePorId(id));
+    }
+
+    @PutMapping("/api/agentes/{id:\\d+}")
+    public ResponseEntity<Agente> actualizarAgente(@PathVariable Long id, @RequestBody Agente agenteActualizado) {
+        Agente actualizado = armaService.actualizarAgente(id, agenteActualizado);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    @DeleteMapping("/api/agentes/{id:\\d+}")
+    public ResponseEntity<Map<String, Object>> eliminarAgente(@PathVariable Long id) {
+        armaService.eliminarAgente(id);
+        Map<String, Object> respuesta = new LinkedHashMap<>();
+        respuesta.put("mensaje", "Agente eliminado correctamente");
+        respuesta.put("idEliminado", id);
+        return ResponseEntity.ok(respuesta);
+    }
+
+    // ==========================================
     // Endpoint del Protocolo de Dominio POO-07 (Interfaz InspeccionableEnPartida)
     // ==========================================
 
-    /**
-     * Consigna 3 (POO-08): Endpoint de lectura que usa el tipo de la interfaz InspeccionableEnPartida
-     * sobre instancias de familias distintas (Arma y Agente).
-     */
     @GetMapping({"/api/armas/protocolo", "/api/protocolo"})
     public ResponseEntity<List<Map<String, Object>>> consultarProtocoloInspeccionable() {
         List<InspeccionableEnPartida> elementos = armaService.obtenerElementosProtocolo();
@@ -112,47 +128,23 @@ public class ArmaController {
     }
 
     // ==========================================
-    // Simulación Persistida con 2 Reglas del Juego y 3 Clases (Arma, Agente, Equipo)
+    // Simulación Persistida sobre Entidades Guardadas en H2 (Arma, Agente y Equipo)
     // ==========================================
 
-    /**
-     * Consigna 7 (POO-08): Simulación de combate y consumo de munición sobre un Arma persistida en H2.
-     * Participan Arma, Agente y Equipo. Un GET posterior a /api/armas/{id} muestra la munición descontada en H2.
-     */
     @PostMapping("/api/armas/{id:\\d+}/simular")
     public ResponseEntity<Map<String, Object>> simularCombatePost(
             @PathVariable Long id,
+            @RequestParam(name = "agenteObjetivoId", required = false) Long agenteObjetivoId,
             @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
             @RequestParam(name = "distancia", defaultValue = "20") int distancia,
-            @RequestParam(name = "headshot", defaultValue = "false") boolean headshot,
-            @RequestParam(name = "chaleco", defaultValue = "true") boolean chaleco,
-            @RequestParam(name = "fuegoAmigo", defaultValue = "false") boolean fuegoAmigo) {
+            @RequestParam(name = "headshot", defaultValue = "false") boolean headshot) {
 
-        Map<String, Object> resultado = armaService.simularCombateConArmaPersistida(
-                id, equipoObjetivo, distancia, headshot, chaleco, fuegoAmigo
+        Map<String, Object> resultado = armaService.simularCombateConEntidadesPersistidas(
+                id, agenteObjetivoId, equipoObjetivo, distancia, headshot
         );
         return ResponseEntity.ok(resultado);
     }
 
-    @GetMapping("/api/armas/{id:\\d+}/simular")
-    public ResponseEntity<Map<String, Object>> simularCombateGet(
-            @PathVariable Long id,
-            @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
-            @RequestParam(name = "distancia", defaultValue = "20") int distancia,
-            @RequestParam(name = "headshot", defaultValue = "false") boolean headshot,
-            @RequestParam(name = "chaleco", defaultValue = "true") boolean chaleco,
-            @RequestParam(name = "fuegoAmigo", defaultValue = "false") boolean fuegoAmigo) {
-
-        Map<String, Object> resultado = armaService.simularCombateConArmaPersistida(
-                id, equipoObjetivo, distancia, headshot, chaleco, fuegoAmigo
-        );
-        return ResponseEntity.ok(resultado);
-    }
-
-    /**
-     * Regla de carga de munición sobre un Arma persistida en H2.
-     * Si el cargador ya está lleno o las balas <= 0, lanza MunicionInsuficienteException.
-     */
     @PostMapping("/api/armas/{id:\\d+}/recargar")
     public ResponseEntity<Map<String, Object>> recargarArmaPersistida(
             @PathVariable Long id,
@@ -160,27 +152,38 @@ public class ArmaController {
         return ResponseEntity.ok(armaService.recargarArmaPersistida(id, balas));
     }
 
-    /**
-     * Consulta los Agentes persistidos en H2 tras las simulaciones.
-     */
-    @GetMapping("/api/agentes/todos")
-    public ResponseEntity<List<Agente>> listarAgentesPersistidos() {
-        return ResponseEntity.ok(armaService.listarAgentes());
+    @PostMapping({"/api/armas/granadas/simular", "/api/armas/explosivos/simular"})
+    public ResponseEntity<Map<String, Object>> simularExplosionGranadaPost(
+            @RequestParam(name = "granadaId", required = false) Long granadaId,
+            @RequestParam(name = "agenteObjetivoId", required = false) Long agenteObjetivoId,
+            @RequestParam(name = "equipoAtacante", defaultValue = "Counter-Terrorista") String equipoAtacante,
+            @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
+            @RequestParam(name = "distancia", defaultValue = "2.0") double distancia) {
+
+        Map<String, Object> resultado = armaService.simularExplosionGranada(
+                granadaId, agenteObjetivoId, equipoAtacante, equipoObjetivo, distancia
+        );
+        return ResponseEntity.ok(resultado);
     }
 
-    @GetMapping("/api/agentes/{id:\\d+}")
-    public ResponseEntity<Agente> obtenerAgentePorId(@PathVariable Long id) {
-        return ResponseEntity.ok(armaService.obtenerAgentePorId(id));
+    @GetMapping({"/api/armas/granadas/simular", "/api/armas/explosivos/simular"})
+    public ResponseEntity<Map<String, Object>> simularExplosionGranadaGet(
+            @RequestParam(name = "granadaId", required = false) Long granadaId,
+            @RequestParam(name = "agenteObjetivoId", required = false) Long agenteObjetivoId,
+            @RequestParam(name = "equipoAtacante", defaultValue = "Counter-Terrorista") String equipoAtacante,
+            @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
+            @RequestParam(name = "distancia", defaultValue = "2.0") double distancia) {
+
+        Map<String, Object> resultado = armaService.simularExplosionGranada(
+                granadaId, agenteObjetivoId, equipoAtacante, equipoObjetivo, distancia
+        );
+        return ResponseEntity.ok(resultado);
     }
 
     // ==========================================
     // Endpoints de Dominio / Polimorfismo / Sobrecarga
     // ==========================================
 
-    /**
-     * Construye una instancia del dominio a partir de parámetros de la URL,
-     * la valida mediante ArmaService y la persiste en H2.
-     */
     @GetMapping({"/api/armas", "/api/armas/construir"})
     public Map<String, Object> construirArma(
             @RequestParam(name = "nombre", defaultValue = "M4A4") String nombre,
@@ -188,10 +191,9 @@ public class ArmaController {
             @RequestParam(name = "daño", required = false) Integer daño,
             @RequestParam(name = "equipo", required = false) String equipoNombre) {
 
-        Arma arma = armaService.construirYGuardarArma(nombre, daño, municion, equipoNombre);
+        Arma arma = armaService.construirArmaValidada(nombre, daño, municion, equipoNombre);
 
         Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("id", arma.getId());
         respuesta.put("arma", arma.getNombre());
         respuesta.put("municion", arma.getMunicion());
         respuesta.put("capacidadCargador", arma.getCapacidadCargador());
@@ -203,9 +205,6 @@ public class ArmaController {
         return respuesta;
     }
 
-    /**
-     * Respuesta en JSON al pedirle el mensaje abstracto a cada clase hija.
-     */
     @GetMapping("/api/armas/polimorfismo")
     public List<Map<String, Object>> demostrarPolimorfismo() {
         List<Arma> armas = armaService.obtenerCatalogoPolimorfico();
@@ -224,14 +223,15 @@ public class ArmaController {
         return lista;
     }
 
-    /**
-     * Demuestra la sobrecarga del mensaje del dominio.
-     */
     @GetMapping("/api/armas/disparar")
     public Map<String, Object> dispararArma(
             @RequestParam(name = "nombre", defaultValue = "M4A4") String nombre,
             @RequestParam(name = "distancia", required = false) Integer distancia,
             @RequestParam(name = "headshot", defaultValue = "false") boolean headshot) {
+
+        if (distancia != null && distancia < 0) {
+            throw new IllegalArgumentException("La distancia de disparo no puede ser negativa: " + distancia);
+        }
 
         Arma arma = armaService.fabricarArma(nombre, null, null, new Equipo("Counter-Terrorista"));
 
@@ -254,29 +254,6 @@ public class ArmaController {
         return respuesta;
     }
 
-    /**
-     * Regla de Negocio en Counter-Strike 2 (Simulación de Granadas / Explosivos):
-     * Participan 3 clases del modelo (Equipo, Agente y GranadaHE) validando fuego amigo,
-     * radio de onda expansiva (5.0m), absorción de chaleco Kevlar y persistencia en H2.
-     */
-    @GetMapping({"/api/armas/granadas/simular", "/api/armas/explosivos/simular"})
-    public ResponseEntity<Map<String, Object>> simularExplosionGranada(
-            @RequestParam(name = "equipoAtacante", defaultValue = "Counter-Terrorista") String equipoAtacante,
-            @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
-            @RequestParam(name = "distancia", defaultValue = "2.0") double distancia,
-            @RequestParam(name = "chaleco", defaultValue = "true") boolean chaleco,
-            @RequestParam(name = "fuegoAmigo", defaultValue = "false") boolean fuegoAmigo,
-            @RequestParam(name = "dañoBase", defaultValue = "98") int dañoBase) {
-
-        Map<String, Object> resultado = armaService.simularExplosionGranada(
-                equipoAtacante, equipoObjetivo, distancia, chaleco, fuegoAmigo, dañoBase
-        );
-        return ResponseEntity.ok(resultado);
-    }
-
-    /**
-     * Demuestra la segunda jerarquía del dominio (Agente -> AgenteCT y AgenteTerrorista).
-     */
     @GetMapping("/api/agentes/polimorfismo")
     public List<Map<String, Object>> demostrarPolimorfismoAgentes() {
         List<Agente> agentes = armaService.obtenerAgentesPolimorfismo();
@@ -300,9 +277,6 @@ public class ArmaController {
     // Manejadores de Excepciones HTTP por Tipo (Consigna 8 POO-08)
     // ==========================================
 
-    /**
-     * Handler HTTP para la Excepción Hija 1: MunicionInsuficienteException (409 Conflict).
-     */
     @ExceptionHandler(MunicionInsuficienteException.class)
     public ResponseEntity<Map<String, Object>> manejarMunicionInsuficiente(MunicionInsuficienteException ex) {
         Map<String, Object> error = new LinkedHashMap<>();
@@ -318,9 +292,6 @@ public class ArmaController {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
-    /**
-     * Handler HTTP para la Excepción Hija 2: FuegoAmigoException (422 Unprocessable Entity).
-     */
     @ExceptionHandler(FuegoAmigoException.class)
     public ResponseEntity<Map<String, Object>> manejarFuegoAmigo(FuegoAmigoException ex) {
         Map<String, Object> error = new LinkedHashMap<>();
@@ -335,9 +306,6 @@ public class ArmaController {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error);
     }
 
-    /**
-     * Handler HTTP para la clase base de excepciones del dominio: ReglaDeJuegoException.
-     */
     @ExceptionHandler(ReglaDeJuegoException.class)
     public ResponseEntity<Map<String, Object>> manejarReglaDeJuegoBase(ReglaDeJuegoException ex) {
         Map<String, Object> error = new LinkedHashMap<>();
@@ -349,9 +317,6 @@ public class ArmaController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    /**
-     * Handler HTTP para invariantes de construcción o argumentos inválidos (400 Bad Request).
-     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> manejarReglaViolada(IllegalArgumentException ex) {
         Map<String, Object> error = new LinkedHashMap<>();
@@ -361,9 +326,6 @@ public class ArmaController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    /**
-     * Handler HTTP para recursos inexistentes en H2 (404 Not Found).
-     */
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> manejarNoEncontrado(NoSuchElementException ex) {
         Map<String, Object> error = new LinkedHashMap<>();
