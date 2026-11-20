@@ -1,27 +1,29 @@
 {
   "_type": "export",
   "__export_format": 4,
-  "__export_date": "2026-11-19T16:50:00.000Z",
+  "__export_date": "2026-11-20T18:45:00.000Z",
   "__export_source": "insomnia.desktop.app:v2023.5.8",
   "resources": [
     {
-      "_id": "wrk_cs2_poo08",
+      "_id": "wrk_cs2_poo09",
       "parentId": null,
-      "modified": 1732035000000,
+      "modified": 1732128000000,
       "created": 1730203200000,
-      "name": "Counter-Strike 2 - TP POO-08 (CRUD H2, Reglas en Service, Interfaz y Excepciones)",
-      "description": "Colección de pruebas REST para el TP POO-08 de Lenguaje de Programación 3 (Diana Aquino).",
+      "name": "Counter-Strike 2 - TP POO-09 (OpenAPI, APIs Cruzadas A1->A2/A3, Escenario H2 y POO-08 Cerrado)",
+      "description": "Colección de pruebas REST para el TP POO-09 y POO-08 de Lenguaje de Programación 3 (Diana Aquino - A1).",
       "scope": "collection",
       "_type": "workspace"
     },
     {
       "_id": "env_cs2_base",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
       "created": 1730203200000,
-      "name": "Base Environment",
+      "name": "Base Environment (A1, A2 y A3)",
       "data": {
         "base_url": "http://localhost:8080",
+        "a2_base_url": "http://localhost:8081",
+        "a3_base_url": "http://localhost:8082",
         "arma_id": 1,
         "agente_terrorista_id": 1,
         "agente_aliado_ct_id": 2
@@ -29,6 +31,8 @@
       "dataPropertyOrder": {
         "&": [
           "base_url",
+          "a2_base_url",
+          "a3_base_url",
           "arma_id",
           "agente_terrorista_id",
           "agente_aliado_ct_id"
@@ -40,29 +44,133 @@
       "_type": "environment"
     },
     {
-      "_id": "req_01_index",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/",
-      "name": "01. GET / - Confirmar servicio vivo",
-      "description": "Verifica que la aplicación Spring Boot está viva y devuelve el catálogo de endpoints.",
+      "_id": "req_00_openapi_a1",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/v3/api-docs",
+      "name": "00. GET /v3/api-docs - Documento OpenAPI 3 de A1 (Diana Aquino)",
+      "description": "Obtiene la especificación OpenAPI 3 en formato JSON con el CRUD, las 2 reglas de negocio, errores (400, 404, 409, 422) y el escenario cruzado.",
       "method": "GET",
       "body": {},
       "parameters": [],
       "headers": [],
       "authentication": {},
-      "metaSortKey": 1,
+      "metaSortKey": 0,
       "_type": "request"
     },
     {
-      "_id": "req_02_post_crear_valido",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
+      "_id": "req_01_escenario_feliz",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/api/escenario/jugadas?balasDisparo=2&distanciaExplosion=2.0&equipoObjetivo=Terrorista&headshot=true",
+      "name": "01. [POO-09] POST /api/escenario/jugadas - Escenario Feliz (A2 y A3 aceptan -> Guarda en H2 de A1)",
+      "description": "Orquesta el escenario 'Asalto Táctico Coordinado': consulta la regla de disparo en A2 y la regla de explosión en A3. Como ambos responden 200 OK, persiste la JugadaEscenario en el H2 de A1 (201 Created).\n\nRespuesta de ejemplo (201 Created):\n{\n  \"id\": 1,\n  \"nombreEscenario\": \"Asalto Táctico Coordinado CS2 (A1 + A2 + A3)\",\n  \"armaIdLocal\": 1,\n  \"nombreArmaLocal\": \"Desert Eagle Blaze\",\n  \"agenteObjetivoIdLocal\": 1,\n  \"nombreAgenteObjetivoLocal\": \"Phoenix Objetivo H2\",\n  \"balasDisparadas\": 2,\n  \"distanciaExplosionMetros\": 2.0,\n  \"dañoTotalAplicado\": 176,\n  \"municionRestanteArma\": 6,\n  \"vidaRestanteAgente\": 0,\n  \"validacionA2\": \"A2 ACEPTÓ (Matias Enciso (A2))\",\n  \"validacionA3\": \"A3 ACEPTÓ (Compañero CS2 (A3))\",\n  \"resultadoFinal\": \"JUGADA PERSISTIDA EN H2 DE A1: Daño=176, Munición restante=6, Vida objetivo=0\"\n}",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 0.1,
+      "_type": "request"
+    },
+    {
+      "_id": "req_02_escenario_rechazo_a2",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/api/escenario/jugadas?balasDisparo=-3&distanciaExplosion=2.0&equipoObjetivo=Terrorista",
+      "name": "02. [POO-09] POST /api/escenario/jugadas (Rechazo de A2) - Balas inválidas (-3) deja H2 igual",
+      "description": "Envía balasDisparo=-3; el compañero A2 rechaza la regla de disparo con HTTP 400. A1 aborta la jugada sin tocar su H2 y atribuye el rechazo a A2.\n\nRespuesta de ejemplo (400 Bad Request):\n{\n  \"error\": \"Escenario rechazado por servicio de compañero\",\n  \"rechazadoPor\": \"A2\",\n  \"nombreCompanero\": \"Matias Enciso (A2)\",\n  \"urlConsultada\": \"http://localhost:8081/api/armas/1/disparar?balas=-3&equipoObjetivo=Terrorista&distancia=2\",\n  \"codigoHttpCompanero\": 400,\n  \"tipoExcepcion\": \"RechazoCompaneroException\",\n  \"jerarquiaPadre\": \"ReglaDeJuegoException\",\n  \"reglaViolada\": \"Rechazo de Regla Remota (A2 - Matias Enciso (A2))\",\n  \"detalleRechazoCompanero\": \"{\\\"error\\\":\\\"ParametroInvalidoException: Las balas a disparar deben ser mayores a 0\\\"}\",\n  \"estadoH2Local\": \"SIN_CAMBIOS (La base de datos H2 de A1 quedó igual que antes)\",\n  \"estado\": 400\n}",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 0.2,
+      "_type": "request"
+    },
+    {
+      "_id": "req_03_escenario_rechazo_a3",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/api/escenario/jugadas?balasDisparo=2&distanciaExplosion=-5.0&equipoObjetivo=Terrorista",
+      "name": "03. [POO-09] POST /api/escenario/jugadas (Rechazo de A3) - Distancia explosiva inválida (-5m) deja H2 igual",
+      "description": "A2 acepta el disparo (balasDisparo=2 -> 200 OK), pero A3 rechaza la explosión por distancia negativa (-5.0m). A1 deja su H2 igual que antes y atribuye el rechazo a A3.\n\nRespuesta de ejemplo (422 Unprocessable Entity):\n{\n  \"error\": \"Escenario rechazado por servicio de compañero\",\n  \"rechazadoPor\": \"A3\",\n  \"nombreCompanero\": \"Compañero CS2 (A3)\",\n  \"urlConsultada\": \"http://localhost:8082/api/simulacion/explosion?distancia=-5.0&equipoObjetivo=Terrorista\",\n  \"codigoHttpCompanero\": 422,\n  \"tipoExcepcion\": \"RechazoCompaneroException\",\n  \"jerarquiaPadre\": \"ReglaDeJuegoException\",\n  \"reglaViolada\": \"Rechazo de Regla Remota (A3 - Compañero CS2 (A3))\",\n  \"detalleRechazoCompanero\": \"{\\\"error\\\":\\\"Regla explosiva A3 violada: La distancia al epicentro no puede ser negativa\\\"}\",\n  \"estadoH2Local\": \"SIN_CAMBIOS (La base de datos H2 de A1 quedó igual que antes)\",\n  \"estado\": 422\n}",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 0.3,
+      "_type": "request"
+    },
+    {
+      "_id": "req_04_get_jugadas_escenario",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/api/escenario/jugadas",
+      "name": "04. [POO-09] GET /api/escenario/jugadas - Verificar jugadas persistidas en H2 de A1",
+      "description": "Muestra las jugadas del escenario guardadas en el H2 de A1 (solo crecen cuando A2 y A3 aceptan).",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 0.4,
+      "_type": "request"
+    },
+    {
+      "_id": "req_05_post_mapa_data",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/api/escenario/mapa-data?clave=ronda_mirage",
+      "name": "05. [Clase] POST /api/escenario/mapa-data - Guardar en Map en memoria (3 capas)",
+      "description": "Guarda datos en el Map en memoria del Service respetando la arquitectura en capas.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"mapa\": \"Mirage\",\n  \"sitio\": \"A\",\n  \"bombaPlantada\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 0.5,
+      "_type": "request"
+    },
+    {
+      "_id": "req_06_get_externo_restful",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
+      "created": 1732128000000,
+      "url": "{{ _.base_url }}/api/escenario/externo/objetos",
+      "name": "06. [Clase] GET /api/escenario/externo/objetos - Consultar https://api.restful-api.dev/objects",
+      "description": "Consulta la API externa https://api.restful-api.dev/objects usando el cliente HTTP de Spring Boot y almacena en el Map.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {},
+      "metaSortKey": 0.6,
+      "_type": "request"
+    },
+    {
+      "_id": "req_07_post_crear_valido",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
       "created": 1730203200000,
       "url": "{{ _.base_url }}/api/armas",
-      "name": "02. POST /api/armas - Crear Arma válida en H2 (201 Created)",
-      "description": "Crea una Desert Eagle en H2 discriminando el subtipo con 'tipoArma' y devuelve 201 Created con su id asignado.",
+      "name": "07. [POO-08] POST /api/armas - Crear Arma válida en H2 (201 Created)",
+      "description": "Crea una Desert Eagle en H2 y devuelve 201 Created.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -76,73 +184,17 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 2,
+      "metaSortKey": 7,
       "_type": "request"
     },
     {
-      "_id": "req_03_get_coleccion",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/armas/todas",
-      "name": "03. GET /api/armas/todas - Listar colección persistida en H2",
-      "description": "Lista todas las armas guardadas en la base de datos H2.",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 3,
-      "_type": "request"
-    },
-    {
-      "_id": "req_04_get_por_id",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}",
-      "name": "04. GET /api/armas/{id} - Leer Arma por ID (200 OK)",
-      "description": "Obtiene el arma por su identificador persistido en H2.",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 4,
-      "_type": "request"
-    },
-    {
-      "_id": "req_05_put_actualizar",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}",
-      "name": "05. PUT /api/armas/{id} - Actualizar Arma en H2 (200 OK)",
-      "description": "Actualiza los atributos del arma existente en H2 validando invariantes y reglas de negocio en ArmaService.",
-      "method": "PUT",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"tipoArma\": \"DesertEagle\",\n  \"nombre\": \"Desert Eagle Printstream\",\n  \"daño\": 50,\n  \"precision\": 0.85,\n  \"tiempoRecarga\": 1.9,\n  \"precio\": 750,\n  \"municion\": 7,\n  \"capacidadCargador\": 7,\n  \"equipo\": {\n    \"nombre\": \"Counter-Terrorista\"\n  }\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 5,
-      "_type": "request"
-    },
-    {
-      "_id": "req_06_post_ilegal",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
+      "_id": "req_08_post_ilegal_radio_negativo",
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
       "created": 1730203200000,
       "url": "{{ _.base_url }}/api/armas",
-      "name": "06. POST /api/armas (Ilegal) - GranadaHE con radioExplosion -3 (400 Bad Request)",
-      "description": "Intenta crear una GranadaHE con radioExplosion negativo (-3); ArmaService lo rechaza con 400 Bad Request sin guardar en H2.",
+      "name": "08. [POO-08 Cerrado] POST /api/armas (Ilegal) - GranadaHE con radioExplosion -3 (400 Bad Request)",
+      "description": "Prueba el cierre del Criterio 3 de POO-08: intenta crear una GranadaHE con radioExplosion -3; ArmaService lo rechaza con 400 Bad Request y no guarda en H2.",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
@@ -156,97 +208,17 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": 6,
-      "_type": "request"
-    },
-    {
-      "_id": "req_07_get_id_inexistente",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/armas/9999",
-      "name": "07. GET /api/armas/9999 - ID inexistente (404 Not Found)",
-      "description": "Consulta un ID que no existe en H2 y recibe 404 Not Found.",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 7,
-      "_type": "request"
-    },
-    {
-      "_id": "req_08_protocolo_interfaz",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/armas/protocolo",
-      "name": "08. GET /api/armas/protocolo - Endpoint de la Interfaz InspeccionableEnPartida (POO-07)",
-      "description": "Usa polimórficamente la interfaz de dominio InspeccionableEnPartida sobre instancias de dos familias distintas (Arma y Agente).",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
       "metaSortKey": 8,
       "_type": "request"
     },
     {
-      "_id": "req_08b_post_agente_terrorista",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/agentes",
-      "name": "08b. POST /api/agentes - Crear AgenteTerrorista en H2 para Simulación (201 Created)",
-      "description": "Crea un AgenteTerrorista en H2 con 100 de vida y 100 de chaleco Kevlar para participar como entidad persistida en la simulación.",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"tipoAgente\": \"AgenteTerrorista\",\n  \"nombre\": \"Phoenix Objetivo H2\",\n  \"vida\": 100,\n  \"chalecoKevlar\": 100,\n  \"dinero\": 800,\n  \"portaBombaC4\": true,\n  \"equipo\": {\n    \"nombre\": \"Terrorista\"\n  }\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 8.5,
-      "_type": "request"
-    },
-    {
-      "_id": "req_08c_post_agente_aliado_ct",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/agentes",
-      "name": "08c. POST /api/agentes - Crear AgenteCT Aliado en H2 (201 Created)",
-      "description": "Crea un AgenteCT aliado en H2 para probar FuegoAmigoException entre entidades persistidas.",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"tipoAgente\": \"AgenteCT\",\n  \"nombre\": \"SAS Aliado H2\",\n  \"vida\": 100,\n  \"chalecoKevlar\": 100,\n  \"dinero\": 800,\n  \"tieneKitDesactivacion\": true,\n  \"equipo\": {\n    \"nombre\": \"Counter-Terrorista\"\n  }\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": 8.7,
-      "_type": "request"
-    },
-    {
       "_id": "req_09_simulacion_combate_feliz",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
       "created": 1730203200000,
       "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}/simular?agenteObjetivoId={{ _.agente_terrorista_id }}&distancia=15&headshot=true",
-      "name": "09. POST /api/armas/{id}/simular - Simulación sobre entidades guardadas en H2",
-      "description": "Carga el Arma y el Agente objetivo por sus IDs desde H2, aplica las 2 reglas en ArmaService y guarda los nuevos estados en H2.",
+      "name": "09. [POO-08 Cerrado] POST /api/armas/{id}/simular - Simulación sobre entidades guardadas en H2",
+      "description": "Carga el Arma y el Agente objetivo por sus IDs desde H2, aplica las 2 reglas en ArmaService y actualiza ambos en H2.",
       "method": "POST",
       "body": {},
       "parameters": [],
@@ -257,12 +229,12 @@
     },
     {
       "_id": "req_10_excepcion_hija_1_municion",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
       "created": 1730203200000,
       "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}/recargar?balas=0",
-      "name": "10. POST /api/armas/{id}/recargar?balas=0 - Excepción Hija 1: MunicionInsuficienteException (409 Conflict)",
-      "description": "ArmaService lanza MunicionInsuficienteException al intentar una carga de munición inválida o disparar sin balas; el handler responde 409 Conflict.",
+      "name": "10. [POO-08] POST /api/armas/{id}/recargar?balas=0 - MunicionInsuficienteException (409 Conflict)",
+      "description": "ArmaService lanza MunicionInsuficienteException (409 Conflict).",
       "method": "POST",
       "body": {},
       "parameters": [],
@@ -273,34 +245,18 @@
     },
     {
       "_id": "req_11_excepcion_hija_2_fuego_amigo",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
+      "parentId": "wrk_cs2_poo09",
+      "modified": 1732128000000,
       "created": 1730203200000,
       "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}/simular?agenteObjetivoId={{ _.agente_aliado_ct_id }}&distancia=10",
-      "name": "11. POST /api/armas/{id}/simular (Aliado en H2) - Excepción Hija 2: FuegoAmigoException (422 Unprocessable Entity)",
-      "description": "ArmaService compara el Equipo del Arma guardada en H2 con el Equipo del Agente aliado guardado en H2 y lanza FuegoAmigoException (422).",
+      "name": "11. [POO-08 Cerrado] POST /api/armas/{id}/simular (Aliado en H2) - FuegoAmigoException (422)",
+      "description": "ArmaService compara los equipos del Arma y del Agente guardados en H2 y lanza FuegoAmigoException (422).",
       "method": "POST",
       "body": {},
       "parameters": [],
       "headers": [],
       "authentication": {},
       "metaSortKey": 11,
-      "_type": "request"
-    },
-    {
-      "_id": "req_12_delete_arma",
-      "parentId": "wrk_cs2_poo08",
-      "modified": 1732035000000,
-      "created": 1730203200000,
-      "url": "{{ _.base_url }}/api/armas/{{ _.arma_id }}",
-      "name": "12. DELETE /api/armas/{id} - Eliminar Arma de H2",
-      "description": "Elimina el arma de la base de datos H2. Un GET posterior a /api/armas/{id} devuelve 404 Not Found.",
-      "method": "DELETE",
-      "body": {},
-      "parameters": [],
-      "headers": [],
-      "authentication": {},
-      "metaSortKey": 12,
       "_type": "request"
     }
   ]

@@ -1,5 +1,10 @@
 package py.edu.uc.lp3.rest.controller;
 
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.jayway.jsonpath.JsonPath;
+import py.edu.uc.lp3.service.CompaneroApiClient;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -21,6 +27,9 @@ public class ArmaControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private CompaneroApiClient companeroApiClient;
 
     @Test
     @DisplayName("GET / confirma que el servicio está vivo y responde 200 OK")
@@ -459,5 +468,113 @@ public class ArmaControllerTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.tipoExcepcion").value("FuegoAmigoException"))
                 .andExpect(jsonPath("$.mensaje", containsString("Fuego amigo bloqueado")));
+    }
+
+    @Test
+    @DisplayName("POO-09: Documento OpenAPI 3 (/v3/api-docs) y Mapa Data en capas responden correctamente")
+    void openApiYMapaDataFuncionan() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.openapi").value(startsWith("3.")))
+                .andExpect(jsonPath("$.info.title", containsString("Counter-Strike 2")));
+
+        mockMvc.perform(post("/api/escenario/mapa-data")
+                        .param("clave", "ronda_1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mapa\":\"Mirage\",\"bombaPlantada\":true}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mapa").value("Mirage"));
+
+        mockMvc.perform(get("/api/escenario/mapa-data"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ronda_1.mapa").value("Mirage"));
+    }
+
+    @Test
+    @DisplayName("POO-09 Escenario de APIs Cruzadas: Camino feliz persiste en H2, y rechazos de A2 o A3 dejan H2 intacta y atribuyen el error")
+    void escenarioApisCruzadasFelizYRechazosDeA2YA3() throws Exception {
+        HttpServer mockA2 = HttpServer.create(new InetSocketAddress(0), 0);
+        mockA2.createContext("/api/armas/1/disparar", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            if (query != null && query.contains("balas=-3")) {
+                byte[] resp = "{\"error\":\"ParametroInvalidoException: Las balas a disparar deben ser mayores a 0\"}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(400, resp.length);
+                try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
+            } else {
+                byte[] resp = "{\"estado\":\"OK\",\"arma\":\"Glock-18\",\"municionRestante\":18}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, resp.length);
+                try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
+            }
+        });
+        mockA2.start();
+
+        HttpServer mockA3 = HttpServer.create(new InetSocketAddress(0), 0);
+        mockA3.createContext("/api/simulacion/explosion", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            if (query != null && query.contains("distancia=-5.0")) {
+                byte[] resp = "{\"error\":\"Regla explosiva A3 violada: La distancia al epicentro no puede ser negativa\"}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(422, resp.length);
+                try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
+            } else {
+                byte[] resp = "{\"estado\":\"EXPLOSION_VALIDA\",\"danioEfectivo\":36.75}".getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, resp.length);
+                try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
+            }
+        });
+        mockA3.start();
+
+        try {
+            String urlA2 = "http://localhost:" + mockA2.getAddress().getPort();
+            String urlA3 = "http://localhost:" + mockA3.getAddress().getPort();
+            companeroApiClient.configurarUrlsParaTesting(urlA2, "/api/armas/1/disparar", urlA3, "/api/simulacion/explosion");
+
+            MvcResult antes = mockMvc.perform(get("/api/escenario/jugadas")).andExpect(status().isOk()).andReturn();
+            int jugadasAntes = ((java.util.List<?>) JsonPath.read(antes.getResponse().getContentAsString(), "$")).size();
+
+            // 1. Camino Feliz: A2 (200) y A3 (200) aceptan -> Se persiste la jugada en el H2 de A1 (201 Created)
+            mockMvc.perform(post("/api/escenario/jugadas")
+                            .param("balasDisparo", "2")
+                            .param("distanciaExplosion", "2.0")
+                            .param("equipoObjetivo", "Terrorista"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.id").isNumber())
+                    .andExpect(jsonPath("$.validacionA2", containsString("A2 ACEPTÓ")))
+                    .andExpect(jsonPath("$.validacionA3", containsString("A3 ACEPTÓ")));
+
+            MvcResult despuesFeliz = mockMvc.perform(get("/api/escenario/jugadas")).andExpect(status().isOk()).andReturn();
+            int jugadasDespuesFeliz = ((java.util.List<?>) JsonPath.read(despuesFeliz.getResponse().getContentAsString(), "$")).size();
+            org.junit.jupiter.api.Assertions.assertEquals(jugadasAntes + 1, jugadasDespuesFeliz);
+
+            // 2. Rechazo de A2 (balasDisparo = -3) -> Atribuye rechazo a A2 y el H2 de A1 NO cambia
+            mockMvc.perform(post("/api/escenario/jugadas")
+                            .param("balasDisparo", "-3")
+                            .param("distanciaExplosion", "2.0"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.rechazadoPor").value("A2"))
+                    .andExpect(jsonPath("$.estadoH2Local", containsString("SIN_CAMBIOS")));
+
+            MvcResult despuesRechazoA2 = mockMvc.perform(get("/api/escenario/jugadas")).andExpect(status().isOk()).andReturn();
+            int jugadasDespuesA2 = ((java.util.List<?>) JsonPath.read(despuesRechazoA2.getResponse().getContentAsString(), "$")).size();
+            org.junit.jupiter.api.Assertions.assertEquals(jugadasDespuesFeliz, jugadasDespuesA2);
+
+            // 3. Rechazo de A3 (A2 acepta, pero A3 rechaza con distanciaExplosion = -5.0) -> Atribuye rechazo a A3 y el H2 de A1 NO cambia
+            mockMvc.perform(post("/api/escenario/jugadas")
+                            .param("balasDisparo", "2")
+                            .param("distanciaExplosion", "-5.0"))
+                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(jsonPath("$.rechazadoPor").value("A3"))
+                    .andExpect(jsonPath("$.estadoH2Local", containsString("SIN_CAMBIOS")));
+
+            MvcResult despuesRechazoA3 = mockMvc.perform(get("/api/escenario/jugadas")).andExpect(status().isOk()).andReturn();
+            int jugadasDespuesA3 = ((java.util.List<?>) JsonPath.read(despuesRechazoA3.getResponse().getContentAsString(), "$")).size();
+            org.junit.jupiter.api.Assertions.assertEquals(jugadasDespuesFeliz, jugadasDespuesA3);
+        } finally {
+            mockA2.stop(0);
+            mockA3.stop(0);
+        }
     }
 }
