@@ -21,10 +21,19 @@
 
 ---
 
-## Etapa 3: Corrección Arquitectónica Posterior a Devolución POO-08
+## Etapa 3: Cierre de Observaciones de POO-08
 
-A partir de la corrección detallada del profesor en POO-08, realicé los siguientes ajustes:
+A partir del documento de corrección de POO-08, realicé los siguientes ajustes:
 1. **Criterio 2 (Separación Dominio vs Service):** Quité todos los `throw new ...` de las entidades del dominio (`Arma`, `Agente`, `Equipo`, `Granada`, `GranadaHE`) y trasladé todas las validaciones, reglas de combate y lanzamiento de excepciones exclusivamente a `ArmaService`.
-2. **Criterio 3 (Ocultamiento e Invariantes):** Eliminé los setters públicos sin control de las entidades (incluyendo `setRadioExplosion`, `setTiempoExplosion`, `setVida`, `setMunicion`) usando `@JsonAutoDetect` por campos y validando en `ArmaService.validarReglasDeNegocio` que una `Granada` tenga siempre `radioExplosion > 0` y `tiempoExplosion > 0` (rechazando con `400 Bad Request` valores como `radioExplosion: -3`).
+2. **Criterio 3 (Ocultamiento e Invariantes):** Eliminé los setters públicos sin control de las entidades (incluyendo `setRadioExplosion`, `setTiempoExplosion`, `setVida`, `setMunicion`) usando `@JsonAutoDetect` por campos y validando en `ArmaService.validarReglasDeNegocio` todos los invariantes de `Arma` y sus subclases (`radioExplosion > 0` y `tiempoExplosion > 0` en `Granada`, rechazando `radioExplosion: -3` con `400 Bad Request`).
 3. **Criterio 6 (Simulación sobre Entidades Guardadas):** Agregué el CRUD de `Agente` (`/api/agentes`) e hice que `simularCombateConEntidadesPersistidas` cargue tanto el `Arma` como el `Agente` objetivo desde H2 por sus IDs y determine `FuegoAmigoException` comparando los equipos guardados en H2.
-4. **Criterio 8 (Documentación):** Sincronicé el `README.md` (explicando cómo Jackson usa el constructor vacío con valores por defecto en `PUT`) y `ESPECIFICACIONES.md` con el comportamiento exacto de `ArmaService`.
+4. **Criterio 8 (Documentación):** Sincronicé el `README.md` y `ESPECIFICACIONES.md` con el comportamiento exacto de `PUT` y de `ArmaService`.
+
+---
+
+## Etapa 4: Challenge de APIs Cruzadas, OpenAPI 3 y Escenario Persistido (POO-09)
+
+1. Le pedí agregar `springdoc-openapi-starter-webmvc-ui` al `pom.xml` y documentar todos los servicios REST con `@Tag`, `@Operation` y `@ApiResponses` para publicar `/v3/api-docs` y `/swagger-ui/index.html`.
+2. Le pedí implementar `CompaneroApiClient` usando `RestClient` de Spring Boot con URLs externalizadas en `application.properties` (`cs2.peers.a2.*` y `cs2.peers.a3.*`), logs en nivel `DEBUG` para todos los pasos de la integración, un `Map` en memoria para guardar datos y consumo de `https://api.restful-api.dev/objects`.
+3. Le pedí crear la entidad `JugadaEscenario`, su repositorio `JugadaEscenarioRepository`, `EscenarioCruzadoService` y `EscenarioCruzadoController` (`POST /api/escenario/jugadas` y `GET /api/escenario/jugadas`) para orquestar el escenario «Asalto Táctico Coordinado» consultando a A2 y A3, persistiendo en H2 solo si ambos aceptan y atribuyendo el rechazo (`"rechazadoPor": "A2"` o `"A3"`) con `RechazoCompaneroException` si alguno falla.
+4. Le pedí generar los diagramas UML de secuencia en Mermaid (camino feliz y rechazos de A2 y A3), actualizar la colección de Insomnia y agregar las pruebas automatizadas con servidores HTTP embebidos.

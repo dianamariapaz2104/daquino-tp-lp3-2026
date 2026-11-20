@@ -1,66 +1,71 @@
-# Especificaciones del TP - Counter-Strike 2 (POO-08)
+# Especificaciones del TP - POO-09 (Challenge de APIs Cruzadas y Cierre POO-08)
 
-**Alumna:** Diana Aquino  
-**Dominio:** Counter-Strike 2  
-**Materia:** Lenguaje de Programación 3 (CYT646)  
-**Enlace exacto al commit de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/0ebed925fcbc017cb112a0a7bd1ce74cb73b2c75  
-
----
-
-## 1. Objetivo del trabajo
-
-El objetivo de este trabajo práctico fue modelar Counter-Strike 2 en Spring Boot 3.3.4 con persistencia en base de datos H2 mediante Spring Data JPA, respetando estrictamente la separación de responsabilidades en 3 capas (`Controller` -> `Service` -> `Repository`). Armé el CRUD completo tanto para la familia de clases `Arma` como para la familia `Agente` (con `Equipo` embebido), centralicé todas las validaciones de invariantes, reglas del juego y lanzamiento de excepciones exclusivamente en `ArmaService` (dejando las entidades solo con su estado y sin setters públicos descontrolados), implementé la simulación trabajando directamente sobre entidades guardadas en H2, agregué la interfaz de dominio `InspeccionableEnPartida` y la jerarquía de excepciones propias con sus handlers HTTP.
+**Alumna (A1):** Diana Aquino  
+**Dominio:** Counter-Strike 2 (CS2)  
+**Asignatura:** Lenguaje de Programación 3 (CYT646) — Edición 2026  
+**Repositorio:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026  
+**Enlace exacto al commit de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/06a3e07e5096c9b32f123ec5e3f5c7a46b8b1f18  
 
 ---
 
-## 2. Qué apliqué en mi modelo e invariantes (validados en `ArmaService`)
+## 1. Quiénes son A1, A2 y A3 (Mapa del Grupo Round Robin en Counter-Strike 2)
 
-- **Tres clases/familias persistidas en H2 (sin lanzar excepciones ni exponer setters libres):**
-  - `Arma` (clase padre abstracta) con sus subclases concretas (`M4A4`, `MP9`, `DesertEagle`, `Glock18`, `Nova`, `GranadaHE`).
-  - `Agente` (clase padre abstracta) con sus dos hijas (`AgenteCT` y `AgenteTerrorista`).
-  - `Equipo` (guardado con `@Embeddable` dentro de las tablas de armas y agentes).
-- **Invariantes y controles de negocio validados exclusivamente por `ArmaService`:**
-  - En `ArmaService.validarReglasDeNegocio(Arma)`: el nombre no puede estar vacío, el daño tiene que ser mayor a `0` y hasta `500`, la munición no puede ser negativa ni superar la `capacidadCargador` (`> 0`), la precisión va entre `0.0` y `1.0`, el tiempo de recarga no puede ser negativo, el precio tiene que estar entre `$0` y `$16,000` (el tope de plata de una partida competitiva de CS2) y, si el arma es una `Granada`, tanto `radioExplosion` como `tiempoExplosion` deben ser estrictamente mayores a `0` (rechazando valores como `radioExplosion: -3` con `400 Bad Request`).
-  - En `ArmaService.validarReglasDeAgente(Agente)`: el nombre no puede estar vacío, la vida y el chaleco Kevlar van de `0` a `100`, el dinero va de `$0` a `$16,000` y el equipo no puede ser vacío.
-- **Interfaz del dominio (POO-07):**
-  - Creé la interfaz `InspeccionableEnPartida` con los métodos `inspeccionarEnPartida()` y `calcularValorEconomico()`, implementada tanto por `Arma` como por `Agente` (dos familias distintas).
-- **Dos reglas de negocio en la simulación sobre entidades guardadas en H2 (`ArmaService`):**
-  - **Regla 1 (munición, cargador y fuego amigo entre entidades guardadas en H2):** `ArmaService` carga el `Arma` y el `Agente` objetivo desde H2 por sus IDs. Si el `Equipo` del `Arma` guardada en H2 y el `Equipo` del `Agente` guardado en H2 son el mismo, `ArmaService` lanza `FuegoAmigoException` (`422 Unprocessable Entity`). Si al `Arma` no le quedan balas en el cargador (`municion == 0`) o se intenta recargar con cantidad `<= 0` o estando lleno, `ArmaService` lanza `MunicionInsuficienteException` (`409 Conflict`).
-  - **Regla 2 (daño y chaleco Kevlar):** Cuando el disparo o la granada impacta en el `Agente` cargado de H2, `ArmaService` descuenta 1 proyectil del `Arma`, calcula el daño según la distancia y si fue headshot, absorbe el 35% del golpe en el `chalecoKevlar` del `Agente` antes de restar la `vida`, y guarda los nuevos estados de ambas entidades en H2.
+- **A1 (Mi servicio — Orquestador del escenario):** **Diana Aquino**
+  - **URL Base:** `http://localhost:8080`
+  - **OpenAPI 3 (JSON):** `http://localhost:8080/v3/api-docs`
+  - **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
+  - **Reglas propias en `ArmaService`:** (1) Control de munición en cargador (`409 MunicionInsuficienteException`) y bloqueo de fuego amigo entre entidades guardadas en H2 del mismo equipo (`422 FuegoAmigoException`); (2) Cálculo de daño balístico/explosivo con absorción del 35% en chaleco Kevlar y descuento de vida del `Agente` en H2.
 
----
+- **A2 (Compañero 1 consultado):** **Matias Enciso** ([MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026))
+  - **URL Base (configurable con `A2_BASE_URL`):** `http://localhost:8081`
+  - **OpenAPI 3:** `http://localhost:8081/v3/api-docs` (`http://localhost:8081/swagger-ui/index.html`)
+  - **Regla consultada (`POST /api/armas/1/disparar?balas={balas}`):** Valida que la cantidad de balas de la ráfaga sea positiva (`400`) y que el arma tenga munición disponible en el cargador (`409`).
 
-## 3. URLs del servicio
-
-- `GET /` — Muestra mi nombre, el dominio y las rutas disponibles (`200 OK`).
-- `POST /api/armas` — Crea un arma nueva en H2 tras validar invariantes en `ArmaService` (`201 Created` o `400 Bad Request`).
-- `GET /api/armas/todas` — Lista todas las armas guardadas en H2 (`200 OK`).
-- `GET /api/armas/{id}` — Busca un arma por su `id` en H2 (`200 OK` o `404 Not Found`).
-- `PUT /api/armas/{id}` — Actualiza los datos de un arma en H2 (`200 OK` o `400 Bad Request`).
-- `DELETE /api/armas/{id}` — Borra un arma de H2 por su `id` (`200 OK` o `404 Not Found`).
-- `POST /api/agentes` — Crea un agente (`AgenteCT` o `AgenteTerrorista`) en H2 (`201 Created` o `400 Bad Request`).
-- `GET /api/agentes/todos` — Lista todos los agentes guardados en H2 (`200 OK`).
-- `GET /api/agentes/{id}` — Busca un agente por su `id` en H2 (`200 OK` o `404 Not Found`).
-- `PUT /api/agentes/{id}` — Actualiza un agente en H2 (`200 OK` o `400 Bad Request`).
-- `DELETE /api/agentes/{id}` — Borra un agente de H2 (`200 OK` o `404 Not Found`).
-- `GET /api/armas/protocolo` — Usa la interfaz `InspeccionableEnPartida` para mostrar armas y agentes juntos (`200 OK`).
-- `POST /api/armas/{id}/simular?agenteObjetivoId={agenteId}&distancia=15&headshot=true` — Corre la simulación cargando el `Arma` y el `Agente` guardados en H2, descuenta munición y baja vida y chaleco del agente en H2 (`200 OK`).
-- `POST /api/armas/{id}/recargar?balas=5` — Recarga balas en el arma guardada en H2 (`200 OK` o `409 Conflict`).
-- `POST /api/armas/granadas/simular?granadaId={granadaId}&agenteObjetivoId={agenteId}&distancia=2.0` — Simula la explosión de una `GranadaHE` con `Agente` y `Equipo`.
-- `http://localhost:8080/h2-console` — Consola de H2 (`JDBC URL`: `jdbc:h2:file:./data/armas`, usuario: `sa`, sin contraseña).
+- **A3 (Compañero 2 consultado):** **Servicio CS2 Explosivos (A3)** ([MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026) / tercer integrante del grupo CS2)
+  - **URL Base (configurable con `A3_BASE_URL`):** `http://localhost:8082`
+  - **OpenAPI 3:** `http://localhost:8082/v3/api-docs` (`http://localhost:8082/swagger-ui/index.html`)
+  - **Regla consultada (`POST /api/simulacion/explosion`):** Valida que la detonación explosiva tenga distancia al epicentro válida (`>= 0`), dentro del radio de explosión y con mitigación de blindaje Kevlar (`400` / `409` / `422`).
 
 ---
 
-## 4. Cómo probarlo
+## 2. El Escenario en una Frase
 
-Para levantar el proyecto desde la terminal:
+**«Asalto Táctico Coordinado en Ronda Competitiva» (`POST /api/escenario/jugadas`):** Un operador ejecuta una jugada combinada de ráfaga de apertura y detonación explosiva sobre un objetivo en el sitio de bomba, la cual consulta primero la regla de disparo/munición en **A2** y luego la regla de explosión/blindaje en **A3**, y **solo persiste la entidad `JugadaEscenario` (y el descuento de munición y vida) en el H2 de A1 si ambas APIs remotas la aceptan** (dejando el H2 de A1 intacto e informando `"rechazadoPor": "A2"` o `"A3"` si alguna la rechaza).
 
-```bash
-./mvnw spring-boot:run
-```
+---
 
-Para correr los 21 tests automatizados:
+## 3. Cierre de las 4 Observaciones de POO-08 (3 de 3 puntos)
 
-```bash
-./mvnw test
-```
+1. **Criterio 2 (Organización en paquetes):** Se quitaron todos los `throw new ...` de las entidades en `py.edu.uc.lp3.domain`. Ahora las entidades solo mantienen su estado y todas las validaciones y excepciones viven exclusivamente en `ArmaService` y `EscenarioCruzadoService`.
+2. **Criterio 3 (Ocultamiento e invariantes):** Se eliminaron `setRadioExplosion`, `setTiempoExplosion`, `setVida`, `setMunicion` y todos los setters públicos libres de las entidades, y `ArmaService.validarReglasDeNegocio` rechaza con `400 Bad Request` cualquier `Granada` con `radioExplosion <= 0` (como `-3`) o `tiempoExplosion <= 0`, sin guardar filas inválidas en H2.
+3. **Criterio 6 (Comportamiento observable):** Se agregó el CRUD de `Agente` (`/api/agentes`) y la simulación carga tanto el `Arma` como el `Agente` guardados en H2 por sus IDs, determinando `FuegoAmigoException` (`422`) según los equipos guardados en H2.
+4. **Criterio 8 (Documentación):** Se sincronizaron el `README.md` y las especificaciones con el comportamiento real del `PUT` (valores por defecto del constructor vacío de la subclase) y con las validaciones centralizadas en `ArmaService`.
+
+---
+
+## 4. Cómo Probarlo
+
+1. **Levantar A2 (`8081`), A3 (`8082`) y A1 (`8080`):**
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+2. **Probar el Camino Feliz (`201 Created` — Guarda en H2 de A1):**
+   ```bash
+   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?balasDisparo=2&distanciaExplosion=2.0&equipoObjetivo=Terrorista"
+   ```
+3. **Verificar que la jugada quedó guardada en el H2 de A1 (`200 OK`):**
+   ```bash
+   curl -s "http://localhost:8080/api/escenario/jugadas"
+   ```
+4. **Probar Rechazo de A2 (`400 Bad Request` — `"rechazadoPor": "A2"`, H2 de A1 no cambia):**
+   ```bash
+   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?balasDisparo=-3&distanciaExplosion=2.0"
+   ```
+5. **Probar Rechazo de A3 (`422` / `400` — `"rechazadoPor": "A3"`, H2 de A1 no cambia):**
+   ```bash
+   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?balasDisparo=2&distanciaExplosion=-5.0"
+   ```
+6. **Correr las 25 pruebas automatizadas:**
+   ```bash
+   ./mvnw test
+   ```
