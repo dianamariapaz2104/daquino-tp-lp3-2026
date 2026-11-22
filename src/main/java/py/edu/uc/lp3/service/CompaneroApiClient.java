@@ -37,7 +37,7 @@ public class CompaneroApiClient {
     @Value("${cs2.peers.a2.base-url:http://localhost:8081}")
     private String a2BaseUrl;
 
-    @Value("${cs2.peers.a2.endpoint:/api/armas/1/disparar}")
+    @Value("${cs2.peers.a2.endpoint:/api/simulacion/explosion}")
     private String a2Endpoint;
 
     @Value("${cs2.peers.a2.openapi-url:http://localhost:8081/v3/api-docs}")
@@ -63,31 +63,32 @@ public class CompaneroApiClient {
     }
 
     /**
-     * Consulta la Regla 1 en el servicio del compañero A2 (validación de disparo y disponibilidad de munición).
-     * Soporta tanto endpoints con query param (?balas=2) como endpoints con cuerpo JSON ({"cargador": 7, "disparos": 2}).
+     * Consulta la Regla en el servicio del compañero A2 (Matias Enciso):
+     * GET /api/simulacion/explosion?distancia=2.5&conBlindaje=true&fuegoAmigo=false
+     * (y también pasa ?balas=... por si A2_ENDPOINT apunta a /api/armas/1/disparar).
      */
-    public Map<String, Object> validarReglaEnA2(int cargadorDisponible, int balasDisparo, String equipoObjetivo, int distanciaMetros) {
+    public Map<String, Object> validarReglaEnA2(int cargadorDisponible, int balasDisparo, String equipoObjetivo, double distanciaMetros) {
+        boolean fuegoAmigo = "Counter-Terrorista".equalsIgnoreCase(equipoObjetivo)
+                || "CT".equalsIgnoreCase(equipoObjetivo)
+                || "COUNTER_TERRORISTA".equalsIgnoreCase(equipoObjetivo);
+
+        // Si balasDisparo <= 0 y estamos llamando a /api/simulacion/explosion, pasamos distancia negativa para provocar el 400 ValidationException en A2
+        double distanciaEfectivaA2 = (balasDisparo <= 0 && distanciaMetros >= 0) ? -Math.abs(balasDisparo) : distanciaMetros;
+
         String url = UriComponentsBuilder.fromHttpUrl(a2BaseUrl + a2Endpoint)
+                .queryParam("distancia", distanciaEfectivaA2)
+                .queryParam("conBlindaje", true)
+                .queryParam("fuegoAmigo", fuegoAmigo)
                 .queryParam("balas", balasDisparo)
                 .queryParam("equipoObjetivo", equipoObjetivo)
-                .queryParam("distancia", distanciaMetros)
                 .toUriString();
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("cargador", cargadorDisponible);
-        payload.put("disparos", balasDisparo);
-        payload.put("balas", balasDisparo);
-        payload.put("equipoObjetivo", equipoObjetivo);
-        payload.put("distanciaMetros", distanciaMetros);
-
-        log.debug("[POO-09][A1 -> A2] Iniciando llamada HTTP POST a compañero A2 ({}) en URL: {} con payload: {}",
-                a2Nombre, url, payload);
+        log.debug("[POO-09][A1 -> A2] Iniciando llamada HTTP GET a compañero A2 ({}) en URL: {}",
+                a2Nombre, url);
 
         try {
-            String respuestaRaw = restClient.post()
+            String respuestaRaw = restClient.get()
                     .uri(url)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(payload)
                     .retrieve()
                     .body(String.class);
 

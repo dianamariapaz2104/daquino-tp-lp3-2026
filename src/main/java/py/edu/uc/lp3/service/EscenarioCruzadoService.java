@@ -71,12 +71,12 @@ public class EscenarioCruzadoService {
         log.debug("[POO-09][Escenario A1] Iniciando escenario 'Asalto Táctico Coordinado' (cargador={}, balas={}, vidaObj={}, armaduraObj={}, danio={}, distancia={}m)",
                 cargadorDisponible, balasDisparo, vidaObjetivo, armaduraObjetivo, danioPropuesto, distanciaExplosionMetros);
 
-        // Paso 1: Consultar validación remota de A2 (Regla de disparo/munición de A2)
+        // Paso 1: Consultar validación remota de A2 (Matias Enciso: GET /api/simulacion/explosion?distancia=2.5&conBlindaje=true&fuegoAmigo=false)
         Map<String, Object> respuestaA2 = companeroApiClient.validarReglaEnA2(
                 cargadorDisponible,
                 balasDisparo,
                 equipoObjetivo,
-                (int) Math.round(distanciaExplosionMetros)
+                distanciaExplosionMetros
         );
 
         // Paso 2: Consultar validación remota de A3 (Regla de daño con chaleco de A3: POST /api/reglas/danio)

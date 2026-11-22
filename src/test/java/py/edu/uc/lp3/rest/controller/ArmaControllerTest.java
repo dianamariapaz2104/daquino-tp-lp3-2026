@@ -494,15 +494,15 @@ public class ArmaControllerTest {
     @DisplayName("POO-09 Escenario de APIs Cruzadas: Camino feliz persiste en H2, y rechazos de A2 o A3 dejan H2 intacta y atribuyen el error")
     void escenarioApisCruzadasFelizYRechazosDeA2YA3() throws Exception {
         HttpServer mockA2 = HttpServer.create(new InetSocketAddress(0), 0);
-        mockA2.createContext("/api/armas/1/disparar", exchange -> {
+        mockA2.createContext("/api/simulacion/explosion", exchange -> {
             String query = exchange.getRequestURI().getQuery();
-            if (query != null && query.contains("balas=-3")) {
-                byte[] resp = "{\"error\":\"ParametroInvalidoException: Las balas a disparar deben ser mayores a 0\"}".getBytes(StandardCharsets.UTF_8);
+            if (query != null && query.contains("distancia=-")) {
+                byte[] resp = "{\"error\":\"ValidationException: La distancia del impacto no puede ser negativa\"}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(400, resp.length);
                 try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
             } else {
-                byte[] resp = "{\"estado\":\"OK\",\"arma\":\"Glock-18\",\"municionRestante\":18}".getBytes(StandardCharsets.UTF_8);
+                byte[] resp = "{\"armaUtilizada\":\"Granada HE\",\"enRadioAlcance\":true,\"distanciaMetros\":2.5,\"danioFinalVida\":33.69,\"vidaRestante\":66.31}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, resp.length);
                 try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
@@ -530,7 +530,7 @@ public class ArmaControllerTest {
         try {
             String urlA2 = "http://localhost:" + mockA2.getAddress().getPort();
             String urlA3 = "http://localhost:" + mockA3.getAddress().getPort();
-            companeroApiClient.configurarUrlsParaTesting(urlA2, "/api/armas/1/disparar", urlA3, "/api/reglas/danio");
+            companeroApiClient.configurarUrlsParaTesting(urlA2, "/api/simulacion/explosion", urlA3, "/api/reglas/danio");
 
             MvcResult antes = mockMvc.perform(get("/api/escenario/jugadas")).andExpect(status().isOk()).andReturn();
             int jugadasAntes = ((java.util.List<?>) JsonPath.read(antes.getResponse().getContentAsString(), "$")).size();

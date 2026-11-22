@@ -31,7 +31,7 @@ Dominio del grupo: **Counter-Strike 2 (CS2)**.
 | Rol | Integrante | Repositorio | URL Base Local | URL del Documento OpenAPI 3 | Reglas publicadas por el dueño (en una frase) |
 | :---: | :--- | :--- | :--- | :--- | :--- |
 | **A1 (Propio)** | **Diana Aquino** | [dianamariapaz2104/daquino-tp-lp3-2026](https://github.com/dianamariapaz2104/daquino-tp-lp3-2026) | `http://localhost:8080` | JSON: `http://localhost:8080/v3/api-docs` <br> UI: `http://localhost:8080/swagger-ui/index.html` | **Regla 1:** Valida munición en cargador (`409`) y bloquea fuego amigo entre entidades del mismo equipo guardadas en H2 (`422`). **Regla 2:** Calcula daño balístico/explosivo con absorción del 35% en chaleco Kevlar y descuenta vida del `Agente` en H2. |
-| **A2 (Compañero 1)** | **Matias Enciso** | [MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026) | `http://localhost:8081` | JSON: `http://localhost:8081/v3/api-docs` <br> UI: `http://localhost:8081/swagger-ui/index.html` | **Regla consultada en A2 (`POST /api/armas/1/disparar?balas={balas}`):** Valida que la cantidad de proyectiles a disparar sea positiva (`400 ParametroInvalidoException`) y que el arma tenga munición suficiente en el cargador (`409 MunicionInsuficienteException`). |
+| **A2 (Compañero 1)** | **Matias Enciso** | [MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026) | `http://localhost:8081` | JSON: `http://localhost:8081/v3/api-docs` <br> UI: `http://localhost:8081/swagger-ui/index.html` | **Regla consultada en A2 (`GET /api/simulacion/explosion?distancia=2.5&conBlindaje=true&fuegoAmigo=false`):** Ejecuta las 2 reglas de negocio de CS2 (atenuación de daño por distancia + fuego amigo al 35%, y mitigación de daño con chaleco Kevlar), o rechaza con `400 ValidationException` si `distancia < 0`. |
 | **A3 (Compañero 2)** | **Fabricio Gonzalez** | [FabricioG29/fg-taller-git-2026](https://github.com/FabricioG29/fg-taller-git-2026) | `http://localhost:8082` | JSON: `http://localhost:8082/v3/api-docs` <br> UI: `http://localhost:8082/swagger-ui.html` | **Regla 1 (`POST /api/reglas/municion`):** Recibe `{"cargador":3,"disparos":2}`, responde `200` si la ráfaga alcanza o `409 SIN_MUNICION`. **Regla 2 consultada (`POST /api/reglas/danio`):** Recibe `{"vida":100,"armadura":100,"danio":36}`, responde `200` con la vida y chaleco restantes (absorbe la mitad) o `422 JUGADOR_ELIMINADO` si la vida ya es `0`. |
 
 *(Nota: Las URLs de A2 y A3 son 100% externalizables mediante `A2_BASE_URL`, `A2_ENDPOINT`, `A3_BASE_URL` y `A3_ENDPOINT` en `application.properties` o variables de entorno, por lo que pueden apuntar tanto a `localhost:8081`/`localhost:8082` en la misma máquina como a las IPs de la red de la sala `http://10.40.x.x:8080`).*
@@ -82,14 +82,14 @@ Para correr las **25 pruebas automatizadas** (que incluyen servidores HTTP embeb
 sequenceDiagram
     actor Cliente as Insomnia (Cliente)
     participant A1 as Diana Aquino (A1 - Escenario :8080)
-    participant A2 as Compañero A2 (Regla Disparo/Munición :8081)
-    participant A3 as Compañero A3 (Regla Daño con Chaleco :8082)
+    participant A2 as Matias Enciso (A2 - Explosión/Blindaje :8081)
+    participant A3 as Fabricio Gonzalez (A3 - Daño con Chaleco :8082)
     participant H2 as Base de Datos H2 de A1
 
-    Cliente->>A1: POST /api/escenario/jugadas?cargador=3&balasDisparo=2&vidaObjetivo=100&armaduraObjetivo=100&danio=36
+    Cliente->>A1: POST /api/escenario/jugadas?cargador=3&balasDisparo=2&vidaObjetivo=100&armaduraObjetivo=100&danio=36&distanciaExplosion=2.5
     A1->>A1: Arma pedido HTTP según OpenAPI de A2 (log DEBUG)
-    A1->>A2: POST /api/armas/1/disparar?balas=2 ({"cargador":3,"disparos":2})
-    A2-->>A1: 200 OK (Ráfaga y munición válidas)
+    A1->>A2: GET /api/simulacion/explosion?distancia=2.5&conBlindaje=true&fuegoAmigo=false
+    A2-->>A1: 200 OK (Atenuación por distancia y mitigación de blindaje Kevlar)
     A1->>A1: Arma pedido HTTP según OpenAPI de A3 (log DEBUG)
     A1->>A3: POST /api/reglas/danio ({"vida":100,"armadura":100,"danio":36})
     A3-->>A1: 200 OK (Vida y chaleco restantes calculados)
@@ -98,19 +98,19 @@ sequenceDiagram
     A1-->>Cliente: 201 Created (JugadaEscenario con validaciones de A2 y A3)
 ```
 
-### Escenario 2: Rechazo del Compañero A2 (`400` / `409` — El H2 de A1 queda intacto)
+### Escenario 2: Rechazo del Compañero A2 (`400 Bad Request` — El H2 de A1 queda intacto)
 
 ```mermaid
 sequenceDiagram
     actor Cliente as Insomnia (Cliente)
     participant A1 as Diana Aquino (A1 - Escenario :8080)
-    participant A2 as Compañero A2 (Regla Disparo/Munición :8081)
-    participant A3 as Compañero A3 (Regla Daño con Chaleco :8082)
+    participant A2 as Matias Enciso (A2 - Explosión/Blindaje :8081)
+    participant A3 as Fabricio Gonzalez (A3 - Daño con Chaleco :8082)
     participant H2 as Base de Datos H2 de A1
 
-    Cliente->>A1: POST /api/escenario/jugadas?balasDisparo=-3&vidaObjetivo=100
-    A1->>A2: POST /api/armas/1/disparar?balas=-3
-    A2-->>A1: 400 / 409 Error (Balas inválidas o SIN_MUNICION)
+    Cliente->>A1: POST /api/escenario/jugadas?distanciaExplosion=-5.0&vidaObjetivo=100
+    A1->>A2: GET /api/simulacion/explosion?distancia=-5.0&conBlindaje=true&fuegoAmigo=false
+    A2-->>A1: 400 Bad Request (ValidationException: La distancia no puede ser negativa)
     Note over A1,H2: A1 no invoca a A3 y deja su base H2 sin cambios
     A1-->>Cliente: 400 Bad Request {"rechazadoPor": "A2", "estadoH2Local": "SIN_CAMBIOS"}
 ```
@@ -121,13 +121,13 @@ sequenceDiagram
 sequenceDiagram
     actor Cliente as Insomnia (Cliente)
     participant A1 as Diana Aquino (A1 - Escenario :8080)
-    participant A2 as Compañero A2 (Regla Disparo/Munición :8081)
-    participant A3 as Compañero A3 (Regla Daño con Chaleco :8082)
+    participant A2 as Matias Enciso (A2 - Explosión/Blindaje :8081)
+    participant A3 as Fabricio Gonzalez (A3 - Daño con Chaleco :8082)
     participant H2 as Base de Datos H2 de A1
 
-    Cliente->>A1: POST /api/escenario/jugadas?balasDisparo=2&vidaObjetivo=0&armaduraObjetivo=0&danio=36
-    A1->>A2: POST /api/armas/1/disparar?balas=2
-    A2-->>A1: 200 OK (Ráfaga válida)
+    Cliente->>A1: POST /api/escenario/jugadas?distanciaExplosion=2.5&vidaObjetivo=0&armaduraObjetivo=0&danio=36
+    A1->>A2: GET /api/simulacion/explosion?distancia=2.5&conBlindaje=true&fuegoAmigo=false
+    A2-->>A1: 200 OK (Explosión válida)
     A1->>A3: POST /api/reglas/danio ({"vida":0,"armadura":0,"danio":36})
     A3-->>A1: 422 Unprocessable Entity (JUGADOR_ELIMINADO: vida ya es 0)
     Note over A1,H2: A1 aborta la transacción y deja su base H2 igual que antes

@@ -16,10 +16,10 @@
   - **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
   - **Reglas propias en `ArmaService`:** (1) Control de munición en cargador (`409 MunicionInsuficienteException`) y bloqueo de fuego amigo entre entidades guardadas en H2 del mismo equipo (`422 FuegoAmigoException`); (2) Cálculo de daño balístico/explosivo con absorción del 35% en chaleco Kevlar y descuento de vida del `Agente` en H2.
 
-- **A2 (Compañero 1 consultado):** **Matias Enciso** ([MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026))
+- **A2 (Compañero 1 consultado):** **Matias Enciso** ([MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026), subcarpeta `cs2/`)
   - **URL Base (configurable con `A2_BASE_URL`):** `http://localhost:8081`
   - **OpenAPI 3:** `http://localhost:8081/v3/api-docs` (`http://localhost:8081/swagger-ui/index.html`)
-  - **Regla consultada (`POST /api/armas/1/disparar?balas={balas}`):** Valida que la cantidad de balas de la ráfaga sea positiva (`400`) y que el arma tenga munición disponible en el cargador (`409`).
+  - **Regla consultada (`GET /api/simulacion/explosion?distancia=2.5&conBlindaje=true&fuegoAmigo=false`):** Ejecuta las 2 reglas de negocio de CS2 (atenuación de daño por distancia + fuego amigo al 35%, y mitigación de daño con chaleco Kevlar), o devuelve `400 Bad Request` (`ValidationException`) si la distancia es negativa.
 
 - **A3 (Compañero 2 consultado):** **Fabricio Gonzalez** ([FabricioG29/fg-taller-git-2026](https://github.com/FabricioG29/fg-taller-git-2026))
   - **URL Base (configurable con `A3_BASE_URL`):** `http://localhost:8082`
