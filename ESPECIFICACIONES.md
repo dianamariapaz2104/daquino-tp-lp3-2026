@@ -21,9 +21,9 @@
   - **OpenAPI 3:** `http://localhost:8081/v3/api-docs` (`http://localhost:8081/swagger-ui/index.html`)
   - **Regla consultada (`POST /api/armas/1/disparar?balas={balas}`):** Valida que la cantidad de balas de la ráfaga sea positiva (`400`) y que el arma tenga munición disponible en el cargador (`409`).
 
-- **A3 (Compañero 2 consultado):** **Fabricio Gonzalez** (`fgonzalez-taller-git-2026`)
+- **A3 (Compañero 2 consultado):** **Fabricio Gonzalez** ([FabricioG29/fg-taller-git-2026](https://github.com/FabricioG29/fg-taller-git-2026))
   - **URL Base (configurable con `A3_BASE_URL`):** `http://localhost:8082`
-  - **OpenAPI 3:** `http://localhost:8082/v3/api-docs` (`http://localhost:8082/swagger-ui/index.html`)
+  - **OpenAPI 3:** `http://localhost:8082/v3/api-docs` (`http://localhost:8082/swagger-ui.html`)
   - **Reglas publicadas y consultadas:**
     - `POST /api/reglas/municion` (`{"cargador":3,"disparos":2}` -> `200` si la ráfaga alcanza, o `409 SIN_MUNICION`).
     - `POST /api/reglas/danio` (`{"vida":100,"armadura":100,"danio":36}` -> `200` con la vida y el chaleco restantes donde el chaleco absorbe la mitad, o `422 JUGADOR_ELIMINADO` si la vida ya es `0`).

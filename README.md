@@ -32,7 +32,7 @@ Dominio del grupo: **Counter-Strike 2 (CS2)**.
 | :---: | :--- | :--- | :--- | :--- | :--- |
 | **A1 (Propio)** | **Diana Aquino** | [dianamariapaz2104/daquino-tp-lp3-2026](https://github.com/dianamariapaz2104/daquino-tp-lp3-2026) | `http://localhost:8080` | JSON: `http://localhost:8080/v3/api-docs` <br> UI: `http://localhost:8080/swagger-ui/index.html` | **Regla 1:** Valida munición en cargador (`409`) y bloquea fuego amigo entre entidades del mismo equipo guardadas en H2 (`422`). **Regla 2:** Calcula daño balístico/explosivo con absorción del 35% en chaleco Kevlar y descuenta vida del `Agente` en H2. |
 | **A2 (Compañero 1)** | **Matias Enciso** | [MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026) | `http://localhost:8081` | JSON: `http://localhost:8081/v3/api-docs` <br> UI: `http://localhost:8081/swagger-ui/index.html` | **Regla consultada en A2 (`POST /api/armas/1/disparar?balas={balas}`):** Valida que la cantidad de proyectiles a disparar sea positiva (`400 ParametroInvalidoException`) y que el arma tenga munición suficiente en el cargador (`409 MunicionInsuficienteException`). |
-| **A3 (Compañero 2)** | **Fabricio Gonzalez** | `fgonzalez-taller-git-2026` | `http://localhost:8082` | JSON: `http://localhost:8082/v3/api-docs` <br> UI: `http://localhost:8082/swagger-ui/index.html` | **Regla 1 (`POST /api/reglas/municion`):** Recibe `{"cargador":3,"disparos":2}`, responde `200` si la ráfaga alcanza o `409 SIN_MUNICION`. **Regla 2 consultada (`POST /api/reglas/danio`):** Recibe `{"vida":100,"armadura":100,"danio":36}`, responde `200` con la vida y chaleco restantes (absorbe la mitad) o `422 JUGADOR_ELIMINADO` si la vida ya es `0`. |
+| **A3 (Compañero 2)** | **Fabricio Gonzalez** | [FabricioG29/fg-taller-git-2026](https://github.com/FabricioG29/fg-taller-git-2026) | `http://localhost:8082` | JSON: `http://localhost:8082/v3/api-docs` <br> UI: `http://localhost:8082/swagger-ui.html` | **Regla 1 (`POST /api/reglas/municion`):** Recibe `{"cargador":3,"disparos":2}`, responde `200` si la ráfaga alcanza o `409 SIN_MUNICION`. **Regla 2 consultada (`POST /api/reglas/danio`):** Recibe `{"vida":100,"armadura":100,"danio":36}`, responde `200` con la vida y chaleco restantes (absorbe la mitad) o `422 JUGADOR_ELIMINADO` si la vida ya es `0`. |
 
 *(Nota: Las URLs de A2 y A3 son 100% externalizables mediante `A2_BASE_URL`, `A2_ENDPOINT`, `A3_BASE_URL` y `A3_ENDPOINT` en `application.properties` o variables de entorno, por lo que pueden apuntar tanto a `localhost:8081`/`localhost:8082` en la misma máquina como a las IPs de la red de la sala `http://10.40.x.x:8080`).*
 
@@ -42,21 +42,23 @@ Dominio del grupo: **Counter-Strike 2 (CS2)**.
 
 Para probar el escenario completo en una misma máquina en tres terminales distintas (primero deben estar arriba **A2** y **A3**, y luego se invoca el escenario en **A1**):
 
-### Terminal 1 — Arrancar Compañero A2 en puerto `8081`:
+### Terminal 1 — Clonar y Arrancar Compañero A2 (Matias Enciso) en puerto `8081`:
 ```bash
-cd /Users/diana/git/menciso-tp-lp3-2026/cs2
-./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8081"
+git clone https://github.com/MatiasEnc/menciso-tp-lp3-2026.git
+cd menciso-tp-lp3-2026/cs2
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 ```
 
-### Terminal 2 — Arrancar Compañero A3 en puerto `8082`:
+### Terminal 2 — Clonar y Arrancar Compañero A3 (Fabricio Gonzalez) en puerto `8082`:
 ```bash
-cd /Users/diana/git/menciso-tp-lp3-2026/cs2
-./mvnw spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
+git clone https://github.com/FabricioG29/fg-taller-git-2026.git
+cd fg-taller-git-2026
+./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8082
 ```
 
 ### Terminal 3 — Arrancar Servicio Propio A1 (Diana Aquino) en puerto `8080`:
 ```bash
-cd /Users/diana/git/daquino-tp-lp3-2026
+cd daquino-tp-lp3-2026
 ./mvnw spring-boot:run
 ```
 
