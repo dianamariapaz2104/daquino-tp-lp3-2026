@@ -28,4 +28,9 @@ public abstract class Escopeta extends Arma {
 
     public int getPerdigones() { return perdigones; }
     public float getDispersion() { return dispersion; }
+
+    public void aplicarParametrosEscopetaValidados(int perdigones, float dispersion) {
+        this.perdigones = perdigones;
+        this.dispersion = dispersion;
+    }
 }

@@ -35,4 +35,9 @@ public abstract class SubfusilSMG extends Arma {
 
     public float getCadenciaFuego() { return cadenciaFuego; }
     public float getMovilidad() { return movilidad; }
+
+    public void aplicarParametrosSubfusilValidados(float cadenciaFuego, float movilidad) {
+        this.cadenciaFuego = cadenciaFuego;
+        this.movilidad = movilidad;
+    }
 }

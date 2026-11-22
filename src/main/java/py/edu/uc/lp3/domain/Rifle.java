@@ -41,4 +41,9 @@ public abstract class Rifle extends Arma {
 
     public String getModoDisparo() { return modoDisparo; }
     public float getRetroceso() { return retroceso; }
+
+    public void aplicarParametrosRifleValidados(String modoDisparo, float retroceso) {
+        this.modoDisparo = modoDisparo;
+        this.retroceso = retroceso;
+    }
 }

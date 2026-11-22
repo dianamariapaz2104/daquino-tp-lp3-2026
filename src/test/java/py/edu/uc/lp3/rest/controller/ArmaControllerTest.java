@@ -352,6 +352,93 @@ public class ArmaControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.mensaje", containsString("no puede superar la capacidad del cargador")));
 
+        // También rechaza GranadaHE con tiempoExplosion <= 0
+        String granadaTiempoCeroJson = """
+                {
+                  "tipoArma": "GranadaHE",
+                  "nombre": "Granada Sin Tiempo",
+                  "daño": 50,
+                  "precision": 1.0,
+                  "tiempoRecarga": 0.0,
+                  "precio": 300,
+                  "municion": 1,
+                  "capacidadCargador": 1,
+                  "radioExplosion": 5.0,
+                  "tiempoExplosion": -1.0,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+        mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(granadaTiempoCeroJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("El tiempo de explosión de una granada debe ser mayor a cero")));
+
+        // También rechaza Rifle M4A4 con retroceso negativo
+        String rifleRetrocesoNegativoJson = """
+                {
+                  "tipoArma": "M4A4",
+                  "nombre": "M4A4 Retroceso Ilegal",
+                  "daño": 30,
+                  "precision": 0.85,
+                  "tiempoRecarga": 2.0,
+                  "precio": 3100,
+                  "municion": 30,
+                  "capacidadCargador": 30,
+                  "retroceso": -0.5,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+        mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rifleRetrocesoNegativoJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("El retroceso de un rifle no puede ser negativo")));
+
+        // También rechaza Escopeta Nova con perdigones <= 0
+        String escopetaPerdigonesCeroJson = """
+                {
+                  "tipoArma": "Nova",
+                  "nombre": "Nova Sin Perdigones",
+                  "daño": 26,
+                  "precision": 0.65,
+                  "tiempoRecarga": 2.5,
+                  "precio": 1050,
+                  "municion": 8,
+                  "capacidadCargador": 8,
+                  "perdigones": 0,
+                  "dispersion": 1.5,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+        mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(escopetaPerdigonesCeroJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("La cantidad de perdigones de la escopeta debe ser positiva")));
+
+        // También rechaza Subfusil MP9 con cadenciaFuego <= 0
+        String subfusilCadenciaCeroJson = """
+                {
+                  "tipoArma": "MP9",
+                  "nombre": "MP9 Sin Cadencia",
+                  "daño": 24,
+                  "precision": 0.70,
+                  "tiempoRecarga": 1.8,
+                  "precio": 1250,
+                  "municion": 30,
+                  "capacidadCargador": 30,
+                  "cadenciaFuego": -5.0,
+                  "movilidad": 1.2,
+                  "equipo": { "nombre": "Counter-Terrorista" }
+                }
+                """;
+        mockMvc.perform(post("/api/armas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(subfusilCadenciaCeroJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensaje", containsString("La cadencia de fuego del subfusil debe ser mayor a cero")));
+
         // Verificar que la colección en H2 no creció
         MvcResult despues = mockMvc.perform(get("/api/armas/todas")).andExpect(status().isOk()).andReturn();
         int cantidadDespues = ((java.util.List<?>) JsonPath.read(despues.getResponse().getContentAsString(), "$")).size();

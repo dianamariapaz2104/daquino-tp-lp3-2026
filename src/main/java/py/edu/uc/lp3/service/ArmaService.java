@@ -118,6 +118,36 @@ public class ArmaService {
                     granadaNueva.getTiempoExplosion()
             );
         }
+        if (existente instanceof Rifle rifleExistente && datosActualizados instanceof Rifle rifleNuevo) {
+            rifleExistente.aplicarParametrosRifleValidados(
+                    rifleNuevo.getModoDisparo(),
+                    rifleNuevo.getRetroceso()
+            );
+        }
+        if (existente instanceof Pistola pistolaExistente && datosActualizados instanceof Pistola pistolaNueva) {
+            pistolaExistente.aplicarParametrosPistolaValidados(
+                    pistolaNueva.getCapacidadCargadorPistola(),
+                    pistolaNueva.getModoDisparo()
+            );
+        }
+        if (existente instanceof Escopeta escopetaExistente && datosActualizados instanceof Escopeta escopetaNueva) {
+            escopetaExistente.aplicarParametrosEscopetaValidados(
+                    escopetaNueva.getPerdigones(),
+                    escopetaNueva.getDispersion()
+            );
+        }
+        if (existente instanceof SubfusilSMG subfusilExistente && datosActualizados instanceof SubfusilSMG subfusilNuevo) {
+            subfusilExistente.aplicarParametrosSubfusilValidados(
+                    subfusilNuevo.getCadenciaFuego(),
+                    subfusilNuevo.getMovilidad()
+            );
+        }
+        if (existente instanceof Francotirador francoExistente && datosActualizados instanceof Francotirador francoNuevo) {
+            francoExistente.aplicarParametrosFrancotiradorValidados(
+                    francoNuevo.getZoom(),
+                    francoNuevo.getPenetracion()
+            );
+        }
 
         return armaRepository.save(existente);
     }

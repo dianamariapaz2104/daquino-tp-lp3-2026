@@ -31,4 +31,9 @@ public abstract class Pistola extends Arma {
 
     public int getCapacidadCargadorPistola() { return capacidadCargadorPistola; }
     public String getModoDisparo() { return modoDisparo; }
+
+    public void aplicarParametrosPistolaValidados(int capacidadCargadorPistola, String modoDisparo) {
+        this.capacidadCargadorPistola = capacidadCargadorPistola;
+        this.modoDisparo = modoDisparo;
+    }
 }

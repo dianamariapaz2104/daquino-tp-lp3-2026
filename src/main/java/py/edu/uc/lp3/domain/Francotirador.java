@@ -36,4 +36,9 @@ public abstract class Francotirador extends Arma {
 
     public float getZoom() { return zoom; }
     public int getPenetracion() { return penetracion; }
+
+    public void aplicarParametrosFrancotiradorValidados(float zoom, int penetracion) {
+        this.zoom = zoom;
+        this.penetracion = penetracion;
+    }
 }
