@@ -48,6 +48,19 @@ public class ArmaService {
         this.agenteRepository = agenteRepository;
     }
 
+    @jakarta.annotation.PostConstruct
+    public void inicializarDatosPorDefectoSiVacio() {
+        if (armaRepository.count() == 0) {
+            armaRepository.save(new M4A4(30, 15, new Equipo("Counter-Terrorista")));
+            armaRepository.save(new DesertEagle(45, 7, new Equipo("Counter-Terrorista")));
+            armaRepository.save(new GranadaHE(98, 1, new Equipo("Counter-Terrorista")));
+        }
+        if (agenteRepository.count() == 0) {
+            agenteRepository.save(new AgenteTerrorista("Agente Phoenix (T)", 100, 100, 800, true));
+            agenteRepository.save(new AgenteCT("Agente SAS (CT)", 100, 100, 800, true));
+        }
+    }
+
     // ==========================================
     // Operaciones CRUD de Arma en H2
     // ==========================================
