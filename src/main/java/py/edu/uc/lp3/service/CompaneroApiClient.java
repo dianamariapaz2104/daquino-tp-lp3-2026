@@ -43,7 +43,7 @@ public class CompaneroApiClient {
     @Value("${cs2.peers.a2.openapi-url:http://localhost:8081/v3/api-docs}")
     private String a2OpenApiUrl;
 
-    @Value("${cs2.peers.a3.nombre:Compañero CS2 (A3)}")
+    @Value("${cs2.peers.a3.nombre:Fabricio Gonzalez (A3)}")
     private String a3Nombre;
 
     @Value("${cs2.peers.a3.base-url:http://localhost:8082}")
