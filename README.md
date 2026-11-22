@@ -4,7 +4,7 @@
 
 Trabajo práctico de Lenguaje de Programación 3 (CYT646). Servicio web desarrollado con Spring Boot 3.3.4, Java 21, Spring Data JPA, base de datos H2 y OpenAPI 3 (`springdoc-openapi`) que modela las armas, agentes, equipos y jugadas tácticas de **Counter-Strike 2** respetando la arquitectura en 3 capas (`Controller` -> `Service` -> `Repository`) y orquestando un escenario de **APIs cruzadas (A1 -> A2 y A3)**.
 
-> **Enlace exacto al commit de la solución (POO-09 + Cierre POO-08):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/32bff4bb914b5448ee071791e72a8f93bcc6739e  
+> **Enlace exacto al commit de la solución (POO-09 + Cierre POO-08):** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/096f6ef4803b8dd1afa61dd2942d990408e0b424  
 > **Commit de cierre de código POO-08:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/6d9002dfd47f69a87a98cc60b50d6d4fb11da005  
 > **Commit entrega POO-08 inicial:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/2b8dd29af0449bda75290b1d571a031b24019f9f  
 > **Commit entrega POO-06:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/f8757155883626bc2b6ccb6883b07afd4650fa70
