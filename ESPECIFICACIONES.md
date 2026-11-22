@@ -4,7 +4,7 @@
 **Dominio:** Counter-Strike 2 (CS2)  
 **Asignatura:** Lenguaje de Programación 3 (CYT646) — Edición 2026  
 **Repositorio:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026  
-**Enlace exacto al commit de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/ec7c2fe9c28a58f386dac2ec40715773b27906bf  
+**Enlace exacto al commit de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/b7a4b4b160568776746ba37145a5ce9abbb9acbc  
 
 ---
 
