@@ -62,15 +62,23 @@ public class EscenarioCruzadoController {
     public ResponseEntity<JugadaEscenario> ejecutarEscenario(
             @Parameter(description = "ID del Arma local en el H2 de A1 (opcional)") @RequestParam(name = "armaIdLocal", required = false) Long armaIdLocal,
             @Parameter(description = "ID del Agente objetivo en el H2 de A1 (opcional)") @RequestParam(name = "agenteObjetivoIdLocal", required = false) Long agenteObjetivoIdLocal,
-            @Parameter(description = "Cantidad de balas para validar en A2 (> 0 es válido; <= 0 provoca rechazo de A2)") @RequestParam(name = "balasDisparo", defaultValue = "2") int balasDisparo,
-            @Parameter(description = "Distancia en metros para validar en A3 (>= 0 es válido; < 0 provoca rechazo de A3)") @RequestParam(name = "distanciaExplosion", defaultValue = "2.0") double distanciaExplosion,
+            @Parameter(description = "Balas en el cargador para validar ráfaga (por defecto 7)") @RequestParam(name = "cargador", defaultValue = "7") int cargador,
+            @Parameter(description = "Cantidad de balas para validar en A2 (> 0 y <= cargador es válido; <= 0 o > cargador provoca rechazo de A2)") @RequestParam(name = "balasDisparo", defaultValue = "2") int balasDisparo,
+            @Parameter(description = "Vida actual del objetivo para validar en A3 (> 0 es válido; 0 provoca 422 JUGADOR_ELIMINADO en A3)") @RequestParam(name = "vidaObjetivo", defaultValue = "100") int vidaObjetivo,
+            @Parameter(description = "Armadura/chaleco actual del objetivo para validar en A3") @RequestParam(name = "armaduraObjetivo", defaultValue = "100") int armaduraObjetivo,
+            @Parameter(description = "Daño del impacto para validar en A3 (POST /api/reglas/danio)") @RequestParam(name = "danio", defaultValue = "36") int danio,
+            @Parameter(description = "Distancia en metros del enfrentamiento (>= 0 es válido; < 0 provoca rechazo)") @RequestParam(name = "distanciaExplosion", defaultValue = "2.0") double distanciaExplosion,
             @Parameter(description = "Equipo objetivo de la jugada") @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivo,
             @Parameter(description = "Indica si el disparo local es headshot") @RequestParam(name = "headshot", defaultValue = "true") boolean headshot) {
 
         JugadaEscenario guardada = escenarioCruzadoService.ejecutarEscenarioAsaltoCoordinado(
                 armaIdLocal,
                 agenteObjetivoIdLocal,
+                cargador,
                 balasDisparo,
+                vidaObjetivo,
+                armaduraObjetivo,
+                danio,
                 distanciaExplosion,
                 equipoObjetivo,
                 headshot

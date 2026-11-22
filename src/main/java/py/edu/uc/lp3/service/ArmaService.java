@@ -440,6 +440,77 @@ public class ArmaService {
     }
 
     /**
+     * Regla 1 (Stateless para consulta de compañeros POO-09):
+     * POST /api/reglas/municion — Valida si la ráfaga de disparos alcanza con el cargador actual.
+     * Si disparos <= 0 o disparos > cargador, lanza MunicionInsuficienteException (409 Conflict).
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> validarReglaMunicionParaCompaneros(int cargador, int disparos) {
+        if (disparos <= 0 || cargador <= 0 || disparos > cargador) {
+            throw new MunicionInsuficienteException(
+                    "M4A4",
+                    Math.max(0, cargador),
+                    30,
+                    "SIN_MUNICION: La ráfaga de " + disparos + " disparos no alcanza con " + cargador + " balas en el cargador."
+            );
+        }
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("estado", "RAFAGA_VALIDA");
+        resp.put("cargadorInicial", cargador);
+        resp.put("disparosEjecutados", disparos);
+        resp.put("municionRestante", cargador - disparos);
+        return resp;
+    }
+
+    /**
+     * Regla 2 (Stateless para consulta de compañeros POO-09):
+     * POST /api/reglas/danio (y /api/reglas/fuego-amigo) — Valida que no haya fuego amigo entre equipos (422),
+     * que el objetivo esté vivo (vida > 0) y calcula la absorción del 35% en chaleco Kevlar y la vida restante.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> validarReglaDanioYFuegoAmigoParaCompaneros(
+            String equipoAtacanteNombre,
+            String equipoObjetivoNombre,
+            int vida,
+            int armadura,
+            int danio) {
+
+        Equipo atacante = new Equipo(equipoAtacanteNombre != null ? equipoAtacanteNombre : "Counter-Terrorista");
+        Equipo objetivo = new Equipo(equipoObjetivoNombre != null ? equipoObjetivoNombre : "Terrorista");
+
+        if (atacante.esMismoEquipo(objetivo)) {
+            throw new FuegoAmigoException(
+                    atacante.getNombre(),
+                    "Ataque contra aliado del mismo equipo (" + objetivo.getNombre() + ")",
+                    "FUEGO_AMIGO_BLOQUEADO: El equipo '" + atacante.getNombre() + "' no puede atacar a un aliado de su mismo bando."
+            );
+        }
+        if (vida <= 0) {
+            throw new FuegoAmigoException(
+                    objetivo.getNombre(),
+                    "Impacto sobre jugador ya eliminado",
+                    "JUGADOR_ELIMINADO: El objetivo ya tiene 0 de vida."
+            );
+        }
+        if (danio <= 0) {
+            throw new IllegalArgumentException("El daño debe ser mayor a cero: " + danio);
+        }
+
+        int desgasteChaleco = (armadura > 0) ? Math.min(armadura, (int) Math.round(danio * 0.35)) : 0;
+        int armaduraRestante = Math.max(0, armadura - desgasteChaleco);
+        int vidaRestante = Math.max(0, vida - danio);
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("estado", "IMPACTO_VALIDO");
+        resp.put("equipoAtacante", atacante.getNombre());
+        resp.put("equipoObjetivo", objetivo.getNombre());
+        resp.put("vidaRestante", vidaRestante);
+        resp.put("armaduraRestante", armaduraRestante);
+        resp.put("objetivoSigueVivo", vidaRestante > 0);
+        return resp;
+    }
+
+    /**
      * Simula la explosión de una GranadaHE persistida en H2 contra un Agente objetivo persistido en H2.
      */
     public Map<String, Object> simularExplosionGranada(

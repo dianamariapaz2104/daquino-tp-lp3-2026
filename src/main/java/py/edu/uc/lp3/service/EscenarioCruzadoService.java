@@ -51,33 +51,41 @@ public class EscenarioCruzadoService {
 
     /**
      * Ejecuta el escenario propio de A1 ("Asalto Táctico Coordinado en Ronda Competitiva"):
-     * 1. Consulta a A2 (validación de ráfaga y consumo de proyectiles).
-     * 2. Consulta a A3 (validación de impacto explosivo, distancia al epicentro y blindaje).
+     * 1. Consulta a A2 (validación de ráfaga y consumo de proyectiles: {"cargador": 7, "disparos": 2} / ?balas=2).
+     * 2. Consulta a A3 (validación de daño con chaleco: POST /api/reglas/danio con {"vida": 100, "armadura": 100, "danio": 36}).
      * 3. Solo si A2 y A3 aceptan (2xx), ejecuta la simulación local en A1 y guarda la JugadaEscenario en H2.
      *    Si A2 o A3 rechaza, lanza RechazoCompaneroException sin modificar el H2 de A1.
      */
     public JugadaEscenario ejecutarEscenarioAsaltoCoordinado(
             Long armaIdLocal,
             Long agenteObjetivoIdLocal,
+            int cargadorDisponible,
             int balasDisparo,
+            int vidaObjetivo,
+            int armaduraObjetivo,
+            int danioPropuesto,
             double distanciaExplosionMetros,
             String equipoObjetivo,
             boolean headshot) {
 
-        log.debug("[POO-09][Escenario A1] Iniciando escenario 'Asalto Táctico Coordinado' (armaIdLocal={}, agenteIdLocal={}, balas={}, distanciaExplosion={}m)",
-                armaIdLocal, agenteObjetivoIdLocal, balasDisparo, distanciaExplosionMetros);
+        log.debug("[POO-09][Escenario A1] Iniciando escenario 'Asalto Táctico Coordinado' (cargador={}, balas={}, vidaObj={}, armaduraObj={}, danio={}, distancia={}m)",
+                cargadorDisponible, balasDisparo, vidaObjetivo, armaduraObjetivo, danioPropuesto, distanciaExplosionMetros);
 
         // Paso 1: Consultar validación remota de A2 (Regla de disparo/munición de A2)
         Map<String, Object> respuestaA2 = companeroApiClient.validarReglaEnA2(
+                cargadorDisponible,
                 balasDisparo,
                 equipoObjetivo,
                 (int) Math.round(distanciaExplosionMetros)
         );
 
-        // Paso 2: Consultar validación remota de A3 (Regla de explosión/blindaje de A3)
+        // Paso 2: Consultar validación remota de A3 (Regla de daño con chaleco de A3: POST /api/reglas/danio)
         Map<String, Object> respuestaA3 = companeroApiClient.validarReglaEnA3(
-                3L,
-                1L,
+                vidaObjetivo,
+                armaduraObjetivo,
+                danioPropuesto,
+                cargadorDisponible,
+                balasDisparo,
                 distanciaExplosionMetros,
                 equipoObjetivo
         );

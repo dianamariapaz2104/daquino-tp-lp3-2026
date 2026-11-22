@@ -511,15 +511,15 @@ public class ArmaControllerTest {
         mockA2.start();
 
         HttpServer mockA3 = HttpServer.create(new InetSocketAddress(0), 0);
-        mockA3.createContext("/api/simulacion/explosion", exchange -> {
-            String query = exchange.getRequestURI().getQuery();
-            if (query != null && query.contains("distancia=-5.0")) {
-                byte[] resp = "{\"error\":\"Regla explosiva A3 violada: La distancia al epicentro no puede ser negativa\"}".getBytes(StandardCharsets.UTF_8);
+        mockA3.createContext("/api/reglas/danio", exchange -> {
+            String bodyReq = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            if (bodyReq.contains("\"vida\":0")) {
+                byte[] resp = "{\"error\":\"JUGADOR_ELIMINADO: La vida del objetivo ya es 0\"}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(422, resp.length);
                 try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
             } else {
-                byte[] resp = "{\"estado\":\"EXPLOSION_VALIDA\",\"danioEfectivo\":36.75}".getBytes(StandardCharsets.UTF_8);
+                byte[] resp = "{\"vidaRestante\":82,\"armaduraRestante\":82}".getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, resp.length);
                 try (OutputStream os = exchange.getResponseBody()) { os.write(resp); }
@@ -530,14 +530,18 @@ public class ArmaControllerTest {
         try {
             String urlA2 = "http://localhost:" + mockA2.getAddress().getPort();
             String urlA3 = "http://localhost:" + mockA3.getAddress().getPort();
-            companeroApiClient.configurarUrlsParaTesting(urlA2, "/api/armas/1/disparar", urlA3, "/api/simulacion/explosion");
+            companeroApiClient.configurarUrlsParaTesting(urlA2, "/api/armas/1/disparar", urlA3, "/api/reglas/danio");
 
             MvcResult antes = mockMvc.perform(get("/api/escenario/jugadas")).andExpect(status().isOk()).andReturn();
             int jugadasAntes = ((java.util.List<?>) JsonPath.read(antes.getResponse().getContentAsString(), "$")).size();
 
             // 1. Camino Feliz: A2 (200) y A3 (200) aceptan -> Se persiste la jugada en el H2 de A1 (201 Created)
             mockMvc.perform(post("/api/escenario/jugadas")
+                            .param("cargador", "3")
                             .param("balasDisparo", "2")
+                            .param("vidaObjetivo", "100")
+                            .param("armaduraObjetivo", "100")
+                            .param("danio", "36")
                             .param("distanciaExplosion", "2.0")
                             .param("equipoObjetivo", "Terrorista"))
                     .andExpect(status().isCreated())
@@ -552,7 +556,7 @@ public class ArmaControllerTest {
             // 2. Rechazo de A2 (balasDisparo = -3) -> Atribuye rechazo a A2 y el H2 de A1 NO cambia
             mockMvc.perform(post("/api/escenario/jugadas")
                             .param("balasDisparo", "-3")
-                            .param("distanciaExplosion", "2.0"))
+                            .param("vidaObjetivo", "100"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.rechazadoPor").value("A2"))
                     .andExpect(jsonPath("$.estadoH2Local", containsString("SIN_CAMBIOS")));
@@ -561,10 +565,12 @@ public class ArmaControllerTest {
             int jugadasDespuesA2 = ((java.util.List<?>) JsonPath.read(despuesRechazoA2.getResponse().getContentAsString(), "$")).size();
             org.junit.jupiter.api.Assertions.assertEquals(jugadasDespuesFeliz, jugadasDespuesA2);
 
-            // 3. Rechazo de A3 (A2 acepta, pero A3 rechaza con distanciaExplosion = -5.0) -> Atribuye rechazo a A3 y el H2 de A1 NO cambia
+            // 3. Rechazo de A3 (A2 acepta, pero A3 rechaza con 422 JUGADOR_ELIMINADO cuando vidaObjetivo = 0) -> Atribuye rechazo a A3 y el H2 de A1 NO cambia
             mockMvc.perform(post("/api/escenario/jugadas")
                             .param("balasDisparo", "2")
-                            .param("distanciaExplosion", "-5.0"))
+                            .param("vidaObjetivo", "0")
+                            .param("armaduraObjetivo", "0")
+                            .param("danio", "36"))
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(jsonPath("$.rechazadoPor").value("A3"))
                     .andExpect(jsonPath("$.estadoH2Local", containsString("SIN_CAMBIOS")));

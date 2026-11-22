@@ -49,7 +49,7 @@ public class CompaneroApiClient {
     @Value("${cs2.peers.a3.base-url:http://localhost:8082}")
     private String a3BaseUrl;
 
-    @Value("${cs2.peers.a3.endpoint:/api/simulacion/explosion}")
+    @Value("${cs2.peers.a3.endpoint:/api/reglas/danio}")
     private String a3Endpoint;
 
     @Value("${cs2.peers.a3.openapi-url:http://localhost:8082/v3/api-docs}")
@@ -63,21 +63,25 @@ public class CompaneroApiClient {
     }
 
     /**
-     * Consulta la Regla 1 en el servicio del compañero A2 (ej. validación de disparo y consumo de munición).
+     * Consulta la Regla 1 en el servicio del compañero A2 (validación de disparo y disponibilidad de munición).
+     * Soporta tanto endpoints con query param (?balas=2) como endpoints con cuerpo JSON ({"cargador": 7, "disparos": 2}).
      */
-    public Map<String, Object> validarReglaEnA2(int balasDisparo, String equipoObjetivo, int distanciaMetros) {
+    public Map<String, Object> validarReglaEnA2(int cargadorDisponible, int balasDisparo, String equipoObjetivo, int distanciaMetros) {
         String url = UriComponentsBuilder.fromHttpUrl(a2BaseUrl + a2Endpoint)
                 .queryParam("balas", balasDisparo)
                 .queryParam("equipoObjetivo", equipoObjetivo)
                 .queryParam("distancia", distanciaMetros)
                 .toUriString();
 
-        log.debug("[POO-09][A1 -> A2] Iniciando llamada HTTP POST a compañero A2 ({}) en URL: {}", a2Nombre, url);
-
         Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("cargador", cargadorDisponible);
+        payload.put("disparos", balasDisparo);
         payload.put("balas", balasDisparo);
         payload.put("equipoObjetivo", equipoObjetivo);
         payload.put("distanciaMetros", distanciaMetros);
+
+        log.debug("[POO-09][A1 -> A2] Iniciando llamada HTTP POST a compañero A2 ({}) en URL: {} con payload: {}",
+                a2Nombre, url, payload);
 
         try {
             String respuestaRaw = restClient.post()
@@ -124,17 +128,20 @@ public class CompaneroApiClient {
     }
 
     /**
-     * Consulta la Regla 2 en el servicio del compañero A3 (ej. validación de explosión, mitigación de blindaje y fuego amigo).
+     * Consulta la Regla 2 en el servicio del compañero A3:
+     * POST /api/reglas/danio con cuerpo {"vida": 100, "armadura": 100, "danio": 36}.
+     * Responde 200 con la vida y el chaleco que quedan, o 422 JUGADOR_ELIMINADO si la vida ya es 0.
+     * También incluye {"cargador": ..., "disparos": ...} por si se consulta /api/reglas/municion (409 SIN_MUNICION).
      */
-    public Map<String, Object> validarReglaEnA3(Long armaIdRemoto, Long jugadorIdRemoto, double distanciaMetros, String equipoObjetivo) {
-        String url = UriComponentsBuilder.fromHttpUrl(a3BaseUrl + a3Endpoint)
-                .queryParam("distancia", distanciaMetros)
-                .queryParam("equipoObjetivo", equipoObjetivo)
-                .toUriString();
+    public Map<String, Object> validarReglaEnA3(int vidaObjetivo, int armaduraObjetivo, int danioCalculado, int cargador, int disparos, double distanciaMetros, String equipoObjetivo) {
+        String url = a3BaseUrl + a3Endpoint;
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("armaId", armaIdRemoto != null ? armaIdRemoto : 3L);
-        payload.put("jugadorId", jugadorIdRemoto != null ? jugadorIdRemoto : 1L);
+        payload.put("vida", vidaObjetivo);
+        payload.put("armadura", armaduraObjetivo);
+        payload.put("danio", danioCalculado);
+        payload.put("cargador", cargador);
+        payload.put("disparos", disparos);
         payload.put("distanciaMetros", distanciaMetros);
         payload.put("equipoObjetivo", equipoObjetivo);
 
@@ -185,10 +192,6 @@ public class CompaneroApiClient {
         }
     }
 
-    /**
-     * Práctica de clase: consulta la API externa https://api.restful-api.dev/objects con el cliente HTTP de Spring Boot
-     * y guarda el resultado en el Map en memoria respetando la arquitectura en capas.
-     */
     public List<Map<String, Object>> consultarApiExternaRestfulDev() {
         log.debug("[POO-09][Cliente Externo] Consultando API externa en: {}", externalRestfulApiUrl);
         List<Map<String, Object>> objetos = restClient.get()

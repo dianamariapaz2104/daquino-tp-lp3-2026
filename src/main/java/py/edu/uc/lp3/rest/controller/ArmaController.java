@@ -231,6 +231,51 @@ public class ArmaController {
     }
 
     @Operation(
+            summary = "Regla 1 para compañeros (POO-09): Validar munición y ráfaga (sin guardar en H2)",
+            description = "Recibe `{\"cargador\": 3, \"disparos\": 2}` (o query params). Responde 200 OK si la ráfaga alcanza, o 409 Conflict (MunicionInsuficienteException / SIN_MUNICION) si no alcanza."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ráfaga válida; devuelve municionRestante"),
+            @ApiResponse(responseCode = "409", description = "SIN_MUNICION: disparos > cargador o disparos <= 0")
+    })
+    @PostMapping("/api/reglas/municion")
+    public ResponseEntity<Map<String, Object>> validarReglaMunicion(
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(name = "cargador", defaultValue = "3") int cargadorParam,
+            @RequestParam(name = "disparos", defaultValue = "2") int disparosParam) {
+
+        int cargador = (body != null && body.get("cargador") instanceof Number n1) ? n1.intValue() : cargadorParam;
+        int disparos = (body != null && body.get("disparos") instanceof Number n2) ? n2.intValue() : disparosParam;
+        return ResponseEntity.ok(armaService.validarReglaMunicionParaCompaneros(cargador, disparos));
+    }
+
+    @Operation(
+            summary = "Regla 2 para compañeros (POO-09): Validar daño con chaleco Kevlar y Fuego Amigo (sin guardar en H2)",
+            description = "Recibe `{\"vida\": 100, \"armadura\": 100, \"danio\": 36, \"equipoAtacante\": \"Counter-Terrorista\", \"equipoObjetivo\": \"Terrorista\"}`. Responde 200 OK con la vida y armadura que quedan (Kevlar absorbe 35%), o 422 Unprocessable Entity si la vida ya es 0 o si hay fuego amigo."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Impacto válido; devuelve vidaRestante y armaduraRestante"),
+            @ApiResponse(responseCode = "422", description = "JUGADOR_ELIMINADO (vida <= 0) o FUEGO_AMIGO_BLOQUEADO (mismo equipo)")
+    })
+    @PostMapping({"/api/reglas/danio", "/api/reglas/fuego-amigo"})
+    public ResponseEntity<Map<String, Object>> validarReglaDanio(
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(name = "equipoAtacante", defaultValue = "Counter-Terrorista") String equipoAtacanteParam,
+            @RequestParam(name = "equipoObjetivo", defaultValue = "Terrorista") String equipoObjetivoParam,
+            @RequestParam(name = "vida", defaultValue = "100") int vidaParam,
+            @RequestParam(name = "armadura", defaultValue = "100") int armaduraParam,
+            @RequestParam(name = "danio", defaultValue = "36") int danioParam) {
+
+        String eqAtacante = (body != null && body.get("equipoAtacante") instanceof String s1) ? s1 : equipoAtacanteParam;
+        String eqObjetivo = (body != null && body.get("equipoObjetivo") instanceof String s2) ? s2 : equipoObjetivoParam;
+        int vida = (body != null && body.get("vida") instanceof Number n1) ? n1.intValue() : vidaParam;
+        int armadura = (body != null && body.get("armadura") instanceof Number n2) ? n2.intValue() : armaduraParam;
+        int danio = (body != null && body.get("danio") instanceof Number n3) ? n3.intValue() : danioParam;
+
+        return ResponseEntity.ok(armaService.validarReglaDanioYFuegoAmigoParaCompaneros(eqAtacante, eqObjetivo, vida, armadura, danio));
+    }
+
+    @Operation(
             summary = "Simular detonación de GranadaHE contra un Agente en H2 (Reglas de Onda Expansiva y Fuego Amigo)",
             description = "Valida alcance de lanzamiento (0..35m), fuego amigo entre el Equipo de la GranadaHE y el Equipo del Agente (422), disponibilidad de la granada (409), atenuación por radio de explosión (5.0m) y absorción de Kevlar."
     )
