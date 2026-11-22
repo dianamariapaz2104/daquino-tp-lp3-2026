@@ -32,7 +32,7 @@
 
 ## 2. El Escenario en una Frase
 
-**«Asalto Táctico Coordinado en Ronda Competitiva» (`POST /api/escenario/jugadas`):** Un operador ejecuta una jugada combinada de ráfaga de apertura y detonación explosiva sobre un objetivo en el sitio de bomba, la cual consulta primero la regla de disparo/munición en **A2** y luego la regla de explosión/blindaje en **A3**, y **solo persiste la entidad `JugadaEscenario` (y el descuento de munición y vida) en el H2 de A1 si ambas APIs remotas la aceptan** (dejando el H2 de A1 intacto e informando `"rechazadoPor": "A2"` o `"A3"` si alguna la rechaza).
+**«Asalto Táctico Coordinado en Ronda Competitiva» (`POST /api/escenario/jugadas`):** Un operador ejecuta una jugada combinada sobre un objetivo en el sitio de bomba que consulta primero la regla de explosión y blindaje en **A2 (Matias Enciso)** y luego la regla de daño con chaleco en **A3 (Fabricio Gonzalez)**, y **solo persiste la entidad `JugadaEscenario` (y el descuento de munición y vida) en el H2 de A1 (`201 Created`) si ambas APIs remotas la aceptan** (dejando el H2 de A1 intacto e informando `"rechazadoPor": "A2"` o `"A3"` si alguna la rechaza).
 
 ---
 
