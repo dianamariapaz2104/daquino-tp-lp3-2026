@@ -59,13 +59,13 @@
    ```bash
    curl -s "http://localhost:8080/api/escenario/jugadas"
    ```
-4. **Probar Rechazo de A2 (`400 Bad Request` — `"rechazadoPor": "A2"`, H2 de A1 no cambia):**
+4. **Probar Rechazo de A2 — Matias Enciso (`400 Bad Request` — `"rechazadoPor": "A2"`, H2 de A1 no cambia):**
    ```bash
-   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?balasDisparo=-3&distanciaExplosion=2.0"
+   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?distanciaExplosion=-5.0&vidaObjetivo=100"
    ```
-5. **Probar Rechazo de A3 (`422` / `400` — `"rechazadoPor": "A3"`, H2 de A1 no cambia):**
+5. **Probar Rechazo de A3 — Fabricio Gonzalez (`422 JUGADOR_ELIMINADO` — `"rechazadoPor": "A3"`, H2 de A1 no cambia):**
    ```bash
-   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?balasDisparo=2&distanciaExplosion=-5.0"
+   curl -i -X POST "http://localhost:8080/api/escenario/jugadas?distanciaExplosion=2.5&vidaObjetivo=0&armaduraObjetivo=0&danio=36"
    ```
 6. **Correr las 25 pruebas automatizadas:**
    ```bash

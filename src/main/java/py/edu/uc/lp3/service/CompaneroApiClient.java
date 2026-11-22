@@ -138,13 +138,14 @@ public class CompaneroApiClient {
         String url = a3BaseUrl + a3Endpoint;
 
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("vida", vidaObjetivo);
-        payload.put("armadura", armaduraObjetivo);
-        payload.put("danio", danioCalculado);
-        payload.put("cargador", cargador);
-        payload.put("disparos", disparos);
-        payload.put("distanciaMetros", distanciaMetros);
-        payload.put("equipoObjetivo", equipoObjetivo);
+        if (a3Endpoint != null && a3Endpoint.contains("municion")) {
+            payload.put("cargador", cargador);
+            payload.put("disparos", disparos);
+        } else {
+            payload.put("vida", vidaObjetivo);
+            payload.put("armadura", armaduraObjetivo);
+            payload.put("danio", danioCalculado);
+        }
 
         log.debug("[POO-09][A1 -> A3] Iniciando llamada HTTP POST a compañero A3 ({}) en URL: {} con payload: {}",
                 a3Nombre, url, payload);
