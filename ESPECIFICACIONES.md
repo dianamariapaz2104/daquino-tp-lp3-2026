@@ -4,7 +4,7 @@
 **Dominio:** Counter-Strike 2 (CS2)  
 **Asignatura:** Lenguaje de Programación 3 (CYT646) — Edición 2026  
 **Repositorio:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026  
-**Enlace exacto al commit de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/06a3e07e5096c9b32f123ec5e3f5c7a46b8b1f18  
+**Enlace exacto al commit de la solución:** https://github.com/dianamariapaz2104/daquino-tp-lp3-2026/commit/350a3158a948d6f3fab5b28290ebbd543169e76a  
 
 ---
 
@@ -21,10 +21,12 @@
   - **OpenAPI 3:** `http://localhost:8081/v3/api-docs` (`http://localhost:8081/swagger-ui/index.html`)
   - **Regla consultada (`POST /api/armas/1/disparar?balas={balas}`):** Valida que la cantidad de balas de la ráfaga sea positiva (`400`) y que el arma tenga munición disponible en el cargador (`409`).
 
-- **A3 (Compañero 2 consultado):** **Servicio CS2 Explosivos (A3)** ([MatiasEnc/menciso-tp-lp3-2026](https://github.com/MatiasEnc/menciso-tp-lp3-2026) / tercer integrante del grupo CS2)
+- **A3 (Compañero 2 consultado):** **Fabricio Gonzalez** (`fgonzalez-taller-git-2026`)
   - **URL Base (configurable con `A3_BASE_URL`):** `http://localhost:8082`
   - **OpenAPI 3:** `http://localhost:8082/v3/api-docs` (`http://localhost:8082/swagger-ui/index.html`)
-  - **Regla consultada (`POST /api/simulacion/explosion`):** Valida que la detonación explosiva tenga distancia al epicentro válida (`>= 0`), dentro del radio de explosión y con mitigación de blindaje Kevlar (`400` / `409` / `422`).
+  - **Reglas publicadas y consultadas:**
+    - `POST /api/reglas/municion` (`{"cargador":3,"disparos":2}` -> `200` si la ráfaga alcanza, o `409 SIN_MUNICION`).
+    - `POST /api/reglas/danio` (`{"vida":100,"armadura":100,"danio":36}` -> `200` con la vida y el chaleco restantes donde el chaleco absorbe la mitad, o `422 JUGADOR_ELIMINADO` si la vida ya es `0`).
 
 ---
 
