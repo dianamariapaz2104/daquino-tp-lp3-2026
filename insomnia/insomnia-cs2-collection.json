@@ -214,7 +214,7 @@
       "parentId": "fld_poo08_crud",
       "modified": 1732128000000,
       "created": 1730203200000,
-      "url": "http://localhost:8080/api/armas",
+      "url": "http://localhost:8080/api/armas/todas",
       "name": "2. Ver todas las armas (GET)",
       "description": "Lista todas las armas persistidas en H2 discriminando su subclase.",
       "method": "GET",
