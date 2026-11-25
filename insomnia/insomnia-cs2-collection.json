@@ -326,7 +326,7 @@
       "parentId": "fld_poo08_crud",
       "modified": 1732128000000,
       "created": 1730203200000,
-      "url": "http://localhost:8080/api/protocolo/inspeccion",
+      "url": "http://localhost:8080/api/protocolo",
       "name": "8. Ver Interfaz (GET)",
       "description": "Devuelve elementos persistidos de dos familias distintas (Arma y Agente) a través de ArmaService usando la interfaz InspeccionableEnPartida.",
       "method": "GET",
