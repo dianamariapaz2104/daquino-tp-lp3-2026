@@ -182,14 +182,19 @@ El archivo está en `insomnia/insomnia-cs2-collection.json`.
 
 1. Arrancar A2 (`8081`), A3 (`8082`) y A1 (`8080`).
 2. Importar `insomnia/insomnia-cs2-collection.json` en Insomnia.
-3. Recorrer los pedidos en orden:
-   - `00. GET /v3/api-docs` — Consulta el documento OpenAPI 3 de A1.
-   - `01. [POO-09] POST /api/escenario/jugadas` — **Escenario Feliz**: A2 y A3 aceptan (`200 OK`) y la jugada se guarda en el H2 de A1 (`201 Created`).
-   - `02. [POO-09] POST /api/escenario/jugadas (Rechazo de A2)` — Envía `distanciaExplosion=-5.0`; A2 (Matias Enciso) rechaza con `400 ValidationException`, A1 devuelve `"rechazadoPor": "A2"` y el H2 de A1 no cambia.
-   - `03. [POO-09] POST /api/escenario/jugadas (Rechazo de A3)` — Envía `vidaObjetivo=0`; A2 acepta pero A3 (Fabricio Gonzalez) rechaza con `422 JUGADOR_ELIMINADO`, A1 devuelve `"rechazadoPor": "A3"` y el H2 de A1 no cambia.
-   - `04. [POO-09] GET /api/escenario/jugadas` — Verifica que en el H2 de A1 solo está guardada la jugada del camino feliz.
-   - `05. [Clase] POST /api/escenario/mapa-data` y `06. [Clase] GET /api/escenario/externo/objetos` — Pruebas del `Map` en memoria y consumo de `https://api.restful-api.dev/objects`.
-   - `07` a `11` — Pedidos de verificación de cierre de POO-08 (incluyendo `GranadaHE` con `radioExplosion: -3` rechazado con `400`, simulación entre entidades guardadas en H2, `409 MunicionInsuficienteException` y `422 FuegoAmigoException`).
+3. Recorrer los pedidos organizados en **2 carpetas**:
+   - **Carpeta `1. POO-09 (Escenario Cruzado)`:**
+     - `01. OpenAPI (GET)` — Consulta el documento OpenAPI 3 de A1 (`/v3/api-docs`).
+     - `02. Escenario Feliz (201)` — A2 (Matias Enciso) y A3 (Fabricio Gonzalez) aceptan (`200 OK`) y la jugada se guarda en el H2 de A1 (`201 Created`).
+     - `03. Ver Jugadas en H2 (GET)` — Verifica las jugadas persistidas en la tabla `jugadas_escenario` de H2 (`200 OK`).
+     - `04. Rechazo de A2 - Matias (400)` — Envía `distanciaExplosion=-5.0`; A2 rechaza con `400`, A1 devuelve `"rechazadoPor": "A2"` y el H2 de A1 no cambia.
+     - `05. Rechazo de A3 - Fabricio (422)` — Envía `vidaObjetivo=0`; A2 acepta pero A3 rechaza con `422 JUGADOR_ELIMINADO`, A1 devuelve `"rechazadoPor": "A3"` y el H2 de A1 no cambia.
+     - `06. Guardar en Map (POST)` y `07. API Externa (GET)` — Pruebas del `Map` en memoria y consumo de `https://api.restful-api.dev/objects`.
+   - **Carpeta `2. POO-08 (CRUD y Reglas)`:**
+     - `1. Crear arma (POST)` (`201`), `2. Ver todas las armas (GET)` (`/api/armas/todas`), `3. Ver arma por ID (GET)`, `4. Editar arma (PUT)` y `5. Eliminar arma (DELETE)` — CRUD completo sobre H2.
+     - `6. Granada radio -3 (400)` — Verifica el cierre del Criterio 3 de POO-08 (`400 Bad Request`, no guarda en H2).
+     - `7. ID inexistente (404)` y `8. Ver Interfaz (GET)` (`/api/protocolo`, interfaz `InspeccionableEnPartida`).
+     - `9. Simular Combate (POST)`, `10. Ver Agente en H2 (GET)`, `11. Error Sin Munición (409)` (`MunicionInsuficienteException`) y `12. Error Fuego Amigo (422)` (`FuegoAmigoException`).
 
 ---
 
